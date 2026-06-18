@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 房间</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  /* 场所 Tab（三等分） */
+  .place-tabs {
+    display: flex; gap: 0; margin: 0 24px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .place-tab {
+    flex: 1; padding: 12px 0; cursor: pointer; text-align: center;
+    font-size: 15px; color: var(--sumi-3);
+    font-weight: 600; position: relative;
+    background: transparent; border: none; font-family: var(--font-sans);
+    white-space: nowrap;
+  }
+  .place-tab .pticon { margin-right: 5px; width: 16px; height: 16px; }
+  .place-tab.active { color: var(--sumi); font-weight: 700; }
+  .place-tab.active::after {
+    content: ''; position: absolute; bottom: -1px; left: 30%; right: 30%;
+    height: 2px; background: var(--indigo);
+  }
+
+  /* 房间卡片网格（4列） */
+  .room-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin: 0 24px 8px;
+  }
+  .room-card {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 12px 6px; text-align: center;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .room-card:hover { border-color: var(--sumi); transform: translateY(-2px); }
+  .room-card.active { border-color: var(--indigo); background: var(--washi-2); }
+  .room-card .remoji { font-size: 26px; }
+  .room-card .rname {
+    font-size: 12px; color: var(--sumi); font-weight: 500;
+    margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .room-card .rnum {
+    font-family: var(--font-serif); font-size: 13px; color: var(--indigo);
+    font-weight: 700; margin-top: 2px;
+  }
+
+  /* 全部家具模块 */
+  .all-furniture { margin: 28px 24px 0; }
+  .all-furniture-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line);
+  }
+  .all-furniture-head .af-left { display: flex; align-items: baseline; gap: 10px; }
+  .all-furniture-head .aftitle {
+    font-family: var(--font-serif); font-size: 15px; font-weight: 700;
+    color: var(--sumi); letter-spacing: 2px;
+  }
+  .all-furniture-head .aftitle .sno { color: var(--bengara); margin-right: 8px; }
+  .all-furniture-head .aftitle .filter-tag {
+    font-size: 11px; color: var(--indigo); font-weight: 500; margin-left: 8px;
+    font-family: var(--font-sans); letter-spacing: 0;
+  }
+  .all-furniture-head .aftitle .filter-tag .clear-filter {
+    color: var(--sumi-3); margin-left: 4px; cursor: pointer; text-decoration: underline;
+  }
+  .all-furniture-head .afcount { font-size: 11px; color: var(--sumi-3); }
+  .all-furniture-head .afcount strong { font-family: var(--font-serif); color: var(--indigo); font-weight: 700; }
+  .all-furniture-head .sort-btn { font-size: 11px; color: var(--sumi-2); cursor: pointer; }
+  .all-furniture-head .sort-btn strong { color: var(--sumi); font-family: var(--font-serif); }
+
+  .af-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--line);
+    cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+  }
+  .af-row:last-child { border-bottom: none; }
+  .af-row:hover { padding-left: 6px; }
+  .af-row:hover .afname { color: var(--indigo); }
+  .af-row .afimg {
+    width: 48px; height: 48px; border-radius: var(--r-md); flex-shrink: 0;
+    object-fit: cover; filter: saturate(0.85);
+  }
+  .af-row .afinfo { flex: 1; min-width: 0; }
+  .af-row .afname { font-size: 14px; font-weight: 500; color: var(--sumi); transition: color 0.2s ease; }
+  .af-row .afname .afnum { font-family: var(--font-serif); font-size: 12px; font-weight: 700; color: var(--indigo); margin-left: 8px; }
+  .af-row .afloc { font-size: 12px; color: var(--sumi-3); font-family: var(--font-serif); flex-shrink: 0; text-align: right; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .af-empty { padding: 30px 0; text-align: center; font-size: 12px; color: var(--sumi-3); }
+
+  /* 新增房间卡片（虚线） */
+  .room-add {
+    border: 1px dashed var(--line-2); background: var(--washi); cursor: pointer;
+  }
+  .room-add:hover { border-color: var(--indigo); }
+
+  /* —— 新增房间悬浮面板 —— */
+  .sheet-mask { position: fixed; inset: 0; background: rgba(42,39,35,0.4); z-index: 80; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: var(--paper);
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); max-height: 80vh;
+    display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(42,39,35,0.15);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sheet.open { transform: translateY(0); }
+  @media (min-width: 481px) { .sheet { left: 50%; transform: translate(-50%, 100%); width: 390px; } .sheet.open { transform: translate(-50%, 0); } }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 20px 12px; border-bottom: 1px solid var(--line); }
+  .sheet-title { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--sumi); }
+  .sheet-close { font-size: 22px; color: var(--sumi-3); cursor: pointer; line-height: 1; padding: 4px; border: none; background: none; }
+  .sheet-body { padding: 16px 20px; }
+  .sf-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 6px; }
+  .sf-input { width: 100%; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: var(--r-md); font-size: 14px; font-family: var(--font-sans); color: var(--sumi); background: var(--washi); outline: none; transition: border-color 0.2s; }
+  .sf-input:focus { border-color: var(--indigo); }
+  .sf-row { margin-bottom: 16px; }
+  .emoji-pick { display: flex; gap: 8px; flex-wrap: wrap; }
+  .emoji-pick .ep { font-size: 22px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; background: var(--washi); }
+  .emoji-pick .ep.active { border-color: var(--indigo); background: var(--paper); box-shadow: 0 0 0 2px rgba(52,92,92,0.15); }
+  .sheet-foot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .sheet-foot .btn-cancel { flex: 0 0 90px; background: transparent; color: var(--sumi-2); border: 1px solid var(--line-2); padding: 13px; border-radius: var(--r-md); font-size: 14px; cursor: pointer; font-family: var(--font-sans); }
+  .sheet-foot .btn-confirm { flex: 1; background: var(--sumi); color: var(--paper); padding: 13px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; letter-spacing: 2px; text-align: center; cursor: pointer; border: none; font-family: var(--font-sans); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="scroll">
+      <div class="topbar">
+        <div class="topbar-title">房间</div>
+        <span class="topbar-action" style="font-size: 12px; color: var(--sumi-3);" id="placeCount">3 / 3</span>
+      </div>
+
+      <!-- 场所 Tab（JS 渲染） -->
+      <div class="place-tabs" id="placeTabs"></div>
+
+      <!-- 房间卡片网格（JS 渲染） -->
+      <div class="room-grid" id="roomGrid"></div>
+
+      <!-- 全部家具（JS 渲染，受房间筛选） -->
+      <div class="all-furniture">
+        <div class="all-furniture-head">
+          <div class="af-left">
+            <div class="aftitle">
+              <span class="sno">01</span>全部家具
+              <span class="filter-tag" id="filterTag" style="display:none;">· <span id="filterRoom"></span><span class="clear-filter" onclick="clearFilter()">✕</span></span>
+            </div>
+            <div class="afcount">共 <strong id="furnCount">0</strong> 件</div>
+          </div>
+          <a class="sort-btn" href="mp-furniture-add.html" style="text-decoration:none;">+ 添加家具</a>
+        </div>
+        <div id="furnList" style="padding: 0 7px;"></div>
+      </div>
+
+      <div style="height: 20px;"></div>
+    </div>
+
+    <a class="fab" href="mp-item-add.html">+</a>
+
+    <div class="tabs">
+      <a class="tab" href="mp-home.html"><span class="tkanji">首页</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-browse.html"><span class="tkanji">物品</span><span class="tdot"></span></a>
+      <a class="tab active" href="mp-place.html"><span class="tkanji">房间</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-profile.html"><span class="tkanji">我的</span><span class="tdot"></span></a>
+    </div>
+  </div>
+
+  <!-- 新增房间面板 -->
+  <div class="sheet-mask" id="roomMask"></div>
+  <div class="sheet" id="roomSheet">
+    <div class="sheet-head">
+      <div class="sheet-title">新增房间</div>
+      <button class="sheet-close" id="roomClose">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sf-row">
+        <div class="sf-label">图标</div>
+        <div class="emoji-pick" id="roomEmojiPick"></div>
+      </div>
+      <div class="sf-row">
+        <div class="sf-label">房间名称</div>
+        <input class="sf-input" id="roomNameInput" placeholder="如：阳台" maxlength="12">
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-cancel" id="roomCancel">取消</button>
+      <button class="btn-confirm" id="roomConfirm">保存</button>
+    </div>
+  </div>
+
+  <script>
+    DB.init();
+    const places = DB.getPlaces();
+    let currentPlaceId = DB.getCurrentPlace().id;
+    let currentFilterRoom = null;
+
+    // 家具占位图：一组通用收纳图，按房间名 hash 稳定取一张（新房间也有图、改名后稳定）
+    const FURN_IMGS = [
+      'photo-1583847268964-b28dc8f51f92', 'photo-1556909114-f6e7ad7d3136',
+      'photo-1556910103-1c02745aae4d', 'photo-1626965556114-27c91c051269',
+      'photo-1605774337664-7a846e9cdf17', 'photo-1522444195799-478538b28823',
+    ];
+    function furnImg(roomName) {
+      let h = 0;
+      const s = String(roomName || '');
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return FURN_IMGS[h % FURN_IMGS.length];
+    }
+
+    // 渲染场所 Tab
+    function renderPlaceTabs() {
+      document.getElementById('placeTabs').innerHTML = places.map(p => `
+        <button class="place-tab ${p.id === currentPlaceId ? 'active' : ''}" onclick="switchPlace('${p.id}')">
+          <span class="pticon pi ${p.iconClass}"></span>${p.name}
+        </button>
+      `).join('');
+      document.getElementById('placeCount').textContent = places.length + ' / 3';
+    }
+
+    // 渲染房间卡片
+    function renderRooms() {
+      const rooms = DB.getRooms(currentPlaceId);
+      const items = DB.getItems(currentPlaceId);
+      const cards = rooms.map((r, i) => {
+        const count = items.filter(it => it.locationPath && it.locationPath.startsWith(r.name)).length;
+        return `<div class="room-card ${i === 0 ? 'active' : ''}" onclick="filterFurniture('${r.id}', '${r.name}', this)">
+          <div class="remoji">${r.emoji}</div><div class="rname">${r.name}</div><div class="rnum">${count}</div>
+        </div>`;
+      }).join('');
+      // 末尾新增房间卡片
+      document.getElementById('roomGrid').innerHTML = cards +
+        `<div class="room-card room-add" onclick="openRoomSheet()">
+          <div class="remoji" style="color:var(--sumi-3);">+</div><div class="rname" style="color:var(--sumi-3);">新增房间</div><div class="rnum">&nbsp;</div>
+        </div>`;
+    }
+
+    // 渲染家具列表
+    function renderFurniture() {
+      const list = document.getElementById('furnList');
+      const countEl = document.getElementById('furnCount');
+      const tag = document.getElementById('filterTag');
+      const tagRoom = document.getElementById('filterRoom');
+      const rooms = DB.getRooms(currentPlaceId);
+      const items = DB.getItems(currentPlaceId);
+
+      let furns = DB.getFurnitures(currentPlaceId).map(f => {
+        const room = rooms.find(r => r.id === f.roomId);
+        const count = items.filter(i => i.furnitureId === f.id).length;
+        return { ...f, roomName: room ? room.name : '', roomEmoji: room ? room.emoji : '', count };
+      });
+      if (currentFilterRoom) {
+        const room = rooms.find(r => r.name === currentFilterRoom);
+        furns = furns.filter(f => f.roomId === (room ? room.id : ''));
+      }
+      countEl.textContent = furns.length;
+
+      if (currentFilterRoom) {
+        tagRoom.textContent = currentFilterRoom;
+        tag.style.display = 'inline';
+      } else {
+        tag.style.display = 'none';
+      }
+
+      if (furns.length === 0) {
+        list.innerHTML = '<div class="af-empty">该房间暂无家具</div>';
+        return;
+      }
+
+      list.innerHTML = furns.map(f => `
+        <a class="af-row" href="mp-search-result.html?furnId=${f.id}">
+          <img class="afimg" src="https://images.unsplash.com/${furnImg(f.roomName)}?w=200&q=70&auto=format&fit=crop" onerror="this.src='https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=200'" alt="${f.name}">
+          <div class="afinfo"><div class="afname">${f.name}<span class="afnum">${f.count}</span></div></div>
+          <div class="afloc">${f.roomName}</div>
+        </a>
+      `).join('');
+    }
+
+    // 切换场所
+    function switchPlace(placeId) {
+      currentPlaceId = placeId;
+      currentFilterRoom = null;
+      renderPlaceTabs();
+      renderRooms();
+      renderFurniture();
+    }
+
+    // 筛选房间家具
+    function filterFurniture(roomId, roomName, card) {
+      document.querySelectorAll('.room-card').forEach(c => c.classList.remove('active'));
+      if (currentFilterRoom === roomName) {
+        currentFilterRoom = null;
+      } else {
+        currentFilterRoom = roomName;
+        card.classList.add('active');
+      }
+      renderFurniture();
+    }
+
+    // 清除筛选
+    function clearFilter() {
+      currentFilterRoom = null;
+      document.querySelectorAll('.room-card').forEach(c => c.classList.remove('active'));
+      renderFurniture();
+    }
+
+    // —— 新增房间面板 ——
+    const ROOM_EMOJIS = ['🚪','🛋️','🛏️','🍳','🚿','📚','🧺','🪴','🌅','📦','✨','🏷️'];
+    const roomMask = document.getElementById('roomMask');
+    const roomSheet = document.getElementById('roomSheet');
+    const roomNameInput = document.getElementById('roomNameInput');
+    const roomEmojiPick = document.getElementById('roomEmojiPick');
+    let roomEmoji = '🚪';
+
+    roomEmojiPick.innerHTML = ROOM_EMOJIS.map(e => `<span class="ep" data-e="${e}">${e}</span>`).join('');
+    roomEmojiPick.addEventListener('click', e => {
+      const t = e.target.closest('.ep'); if (!t) return;
+      roomEmojiPick.querySelectorAll('.ep').forEach(n => n.classList.remove('active'));
+      t.classList.add('active'); roomEmoji = t.dataset.e;
+    });
+
+    function openRoomSheet() {
+      roomNameInput.value = '';
+      roomEmoji = '🚪';
+      roomEmojiPick.querySelectorAll('.ep').forEach(n => n.classList.toggle('active', n.dataset.e === roomEmoji));
+      roomMask.classList.add('open'); roomSheet.classList.add('open');
+      setTimeout(() => roomNameInput.focus(), 300);
+    }
+    function closeRoomSheet() { roomMask.classList.remove('open'); roomSheet.classList.remove('open'); }
+    document.getElementById('roomClose').onclick = closeRoomSheet;
+    document.getElementById('roomCancel').onclick = closeRoomSheet;
+    roomMask.onclick = closeRoomSheet;
+    document.getElementById('roomConfirm').onclick = () => {
+      const v = roomNameInput.value.trim();
+      if (!v) { roomNameInput.focus(); return; }
+      DB.addRoom(currentPlaceId, v, roomEmoji);
+      closeRoomSheet();
+      renderRooms();
+    };
+
+    // 初始渲染
+    renderPlaceTabs();
+    renderRooms();
+    renderFurniture();
+  </script>
+</body>
+</html>

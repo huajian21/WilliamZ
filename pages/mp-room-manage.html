@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 房间家具管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .topbar .back-btn { justify-self: start; }
+  .topbar .topbar-title { justify-self: center; }
+
+  .manage-pad { padding: 8px 24px calc(40px + env(safe-area-inset-bottom)); }
+
+  /* 层级树 */
+  .tree-room {
+    margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--r-lg);
+    background: var(--paper); overflow: hidden;
+  }
+  .tree-room-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--line); cursor: pointer;
+    transition: background 0.2s;
+  }
+  .tree-room-head:hover { background: var(--washi-2); }
+  .tree-room-head .tr-emoji { font-size: 22px; width: 28px; text-align: center; }
+  .tree-room-head .tr-name { flex: 1; font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--sumi); }
+  .tree-room-head .tr-count { font-family: var(--font-serif); font-size: 13px; color: var(--indigo); font-weight: 700; }
+  .tree-room-head .tr-actions { display: flex; gap: 8px; }
+  .tree-room-head .tr-act { font-size: 16px; color: var(--sumi-3); cursor: pointer; padding: 4px 6px; line-height: 1; }
+  .tree-room-head .tr-act.del { color: var(--danger); }
+  .tree-room-body.collapsed { display: none; }
+
+  /* 家具行 */
+  .tree-furn {
+    padding: 12px 16px 12px 56px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .tree-furn:last-child { border-bottom: none; }
+  .tree-furn .tf-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line-2); flex-shrink: 0; }
+  .tree-furn .tf-name { flex: 1; font-size: 13px; color: var(--sumi-2); }
+  .tree-furn .tf-count { font-family: var(--font-serif); font-size: 12px; color: var(--kincha); }
+  .tree-furn .tf-act { font-size: 14px; color: var(--sumi-3); cursor: pointer; padding: 3px 5px; line-height: 1; }
+  .tree-furn .tf-act.del { color: var(--danger); }
+
+  /* 新增按钮 */
+  .add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px; border: 1px dashed var(--line-2); border-radius: var(--r-lg);
+    color: var(--sumi-2); font-size: 14px; cursor: pointer; text-decoration: none;
+    transition: all 0.2s; margin-bottom: 14px;
+  }
+  .add-btn:hover { border-color: var(--indigo); color: var(--indigo); }
+
+  /* 区块标题 */
+  .block-head {
+    font-family: var(--font-serif); font-size: 13px; color: var(--sumi); font-weight: 700;
+    letter-spacing: 2px; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .block-head .bh-no { color: var(--bengara); }
+  .block-head .place-icon { width: 16px; height: 16px; }
+
+  /* 空状态 */
+  .empty-mini { padding: 32px 16px; text-align: center; color: var(--sumi-3); font-size: 13px; }
+
+  /* 照片提示 */
+  .photo-tip {
+    margin-top: 16px; padding: 10px 14px; background: var(--washi-2);
+    border-left: 3px solid var(--indigo); border-radius: var(--r-sm);
+    font-size: 11px; color: var(--sumi-2); line-height: 1.6;
+  }
+  .photo-tip strong { color: var(--indigo); }
+
+  /* —— 编辑悬浮面板 —— */
+  .sheet-mask {
+    position: fixed; inset: 0; background: rgba(42,39,35,0.4); z-index: 80;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: var(--paper);
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); max-height: 80vh;
+    display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(42,39,35,0.15);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sheet.open { transform: translateY(0); }
+  @media (min-width: 481px) { .sheet { left: 50%; transform: translate(-50%, 100%); width: 390px; } .sheet.open { transform: translate(-50%, 0); } }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 20px 12px; border-bottom: 1px solid var(--line); }
+  .sheet-title { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--sumi); }
+  .sheet-close { font-size: 22px; color: var(--sumi-3); cursor: pointer; line-height: 1; padding: 4px; }
+  .sheet-body { padding: 16px 20px; }
+  .sf-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 6px; }
+  .sf-input {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--line-2);
+    border-radius: var(--r-md); font-size: 14px; font-family: var(--font-sans);
+    color: var(--sumi); background: var(--washi); outline: none; transition: border-color 0.2s;
+  }
+  .sf-input:focus { border-color: var(--indigo); }
+  .sf-row { margin-bottom: 16px; }
+  .emoji-pick { display: flex; gap: 8px; flex-wrap: wrap; }
+  .emoji-pick .ep { font-size: 22px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; background: var(--washi); }
+  .emoji-pick .ep.active { border-color: var(--indigo); background: var(--paper); box-shadow: 0 0 0 2px rgba(52,92,92,0.15); }
+  .sheet-foot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .sheet-foot .btn-cancel { flex: 0 0 90px; background: transparent; color: var(--sumi-2); border: 1px solid var(--line-2); padding: 13px; border-radius: var(--r-md); font-size: 14px; cursor: pointer; font-family: var(--font-sans); }
+  .sheet-foot .btn-confirm { flex: 1; background: var(--sumi); color: var(--paper); padding: 13px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; letter-spacing: 2px; text-align: center; cursor: pointer; border: none; font-family: var(--font-sans); }
+</style>
+<script src="../assets/store.js"></script>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-profile.html">‹</a>
+      <div class="topbar-title">房间家具管理</div>
+      <span style="width: 28px;"></span>
+    </div>
+
+    <div class="scroll">
+      <div class="manage-pad">
+        <div class="block-head" id="blockHead">
+          <span class="bh-no">01</span><span class="place-icon" id="placeIcon"></span><span id="placeLabel">房间与家具</span>
+        </div>
+        <div id="treeRoot"></div>
+        <a class="add-btn" id="addRoomBtn">+ 新增房间</a>
+
+        <div class="photo-tip">
+          <strong>📸 照片功能预留:</strong> 房间和家具支持上传照片(P1 功能,数据模型已预留 Room.photo / Furniture.photo 字段)。届时管理页每项可添加照片,房间页/家具列表用真实照片替代 emoji。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑面板 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title" id="sheetTitle">新增房间</div>
+      <span class="sheet-close" id="sheetClose">×</span>
+    </div>
+    <div class="sheet-body">
+      <div class="sf-row" id="emojiRow">
+        <div class="sf-label">图标</div>
+        <div class="emoji-pick" id="emojiPick"></div>
+      </div>
+      <div class="sf-row">
+        <div class="sf-label" id="nameLabel">房间名称</div>
+        <input class="sf-input" id="nameInput" placeholder="如：客厅" maxlength="12">
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-cancel" id="btnCancel">取消</button>
+      <button class="btn-confirm" id="btnConfirm">保存</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const EMOJIS = ['🚪','🛋️','🛏️','🍳','🚿','📚','🧺','🚗','🛠️','📦','✨','🏷️'];
+  const place = DB.getCurrentPlace();
+
+  // —— 顶部场所标识 ——
+  const iconEl = document.getElementById('placeIcon');
+  iconEl.className = 'place-icon pi ' + (place.iconClass || 'pi-home');
+  document.getElementById('placeLabel').textContent = place.name + ' · 房间与家具';
+
+  // —— 渲染树 ——
+  function render() {
+    const root = document.getElementById('treeRoot');
+    const rooms = DB.getRooms(place.id);
+    if (rooms.length === 0) {
+      root.innerHTML = '<div class="empty-mini">还没有房间，点击下方新增</div>';
+      return;
+    }
+    const items = DB.getItems(place.id);
+    root.innerHTML = rooms.map(room => {
+      const furns = DB.getFurnituresByRoom(room.id);
+      const roomCount = items.filter(i => i.furnitureId && furns.some(f => f.id === i.furnitureId)).length;
+      const furnRows = furns.map(f => {
+        const cnt = items.filter(i => i.furnitureId === f.id).length;
+        return `<div class="tree-furn" data-furn="${f.id}">
+          <span class="tf-dot"></span><span class="tf-name">${escapeHtml(f.name)}</span>
+          <span class="tf-count">${cnt}</span>
+          <span class="tf-act edit" title="编辑家具">✎</span>
+          <span class="tf-act del" title="删除家具">✕</span>
+        </div>`;
+      }).join('') || '<div class="tree-furn"><span class="tf-name" style="color:var(--sumi-3);">（暂无家具，点上方编辑添加）</span></div>';
+
+      return `<div class="tree-room" data-room="${room.id}">
+        <div class="tree-room-head">
+          <span class="tr-emoji">${room.emoji || '🚪'}</span>
+          <span class="tr-name">${escapeHtml(room.name)}</span>
+          <span class="tr-count">${roomCount}</span>
+          <div class="tr-actions">
+            <span class="tr-act add-furn" title="添加家具">+</span>
+            <span class="tr-act edit" title="编辑房间">✎</span>
+            <span class="tr-act del" title="删除房间">✕</span>
+          </div>
+        </div>
+        <div class="tree-room-body">${furnRows}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // —— 编辑面板状态 ——
+  const sheetMask = document.getElementById('sheetMask');
+  const sheet = document.getElementById('sheet');
+  const sheetTitle = document.getElementById('sheetTitle');
+  const sheetClose = document.getElementById('sheetClose');
+  const btnCancel = document.getElementById('btnCancel');
+  const btnConfirm = document.getElementById('btnConfirm');
+  const nameInput = document.getElementById('nameInput');
+  const nameLabel = document.getElementById('nameLabel');
+  const emojiRow = document.getElementById('emojiRow');
+  const emojiPick = document.getElementById('emojiPick');
+  let mode = null;   // { kind: 'room'|'furn', op: 'add'|'edit', id?: , roomId? , emoji? }
+
+  // emoji 候选
+  emojiPick.innerHTML = EMOJIS.map(e => `<span class="ep" data-e="${e}">${e}</span>`).join('');
+  emojiPick.addEventListener('click', e => {
+    const t = e.target.closest('.ep'); if (!t) return;
+    emojiPick.querySelectorAll('.ep').forEach(n => n.classList.remove('active'));
+    t.classList.add('active');
+    mode.emoji = t.dataset.e;
+  });
+
+  function openSheet(m) {
+    mode = m;
+    if (m.kind === 'room') {
+      nameLabel.textContent = '房间名称';
+      emojiRow.style.display = '';
+      sheetTitle.textContent = m.op === 'add' ? '新增房间' : '编辑房间';
+      if (m.op === 'edit') {
+        const r = DB.getRoom(m.id);
+        nameInput.value = r.name;
+        mode.emoji = r.emoji || '🚪';
+        emojiPick.querySelectorAll('.ep').forEach(n => n.classList.toggle('active', n.dataset.e === mode.emoji));
+      } else {
+        nameInput.value = '';
+        mode.emoji = '🚪';
+        emojiPick.querySelectorAll('.ep').forEach(n => n.classList.toggle('active', n.dataset.e === mode.emoji));
+      }
+    } else { // furn
+      nameLabel.textContent = '家具名称';
+      emojiRow.style.display = 'none';
+      sheetTitle.textContent = m.op === 'add' ? '添加家具' : '编辑家具';
+      if (m.op === 'edit') {
+        nameInput.value = DB.getFurniture(m.id).name;
+      } else {
+        nameInput.value = '';
+      }
+    }
+    sheetMask.classList.add('open');
+    sheet.classList.add('open');
+    setTimeout(() => nameInput.focus(), 300);
+  }
+  function closeSheet() {
+    sheetMask.classList.remove('open');
+    sheet.classList.remove('open');
+    mode = null;
+  }
+  sheetClose.onclick = btnCancel.onclick = closeSheet;
+  sheetMask.onclick = closeSheet;
+
+  btnConfirm.onclick = () => {
+    if (!mode) return;
+    const v = nameInput.value.trim();
+    if (!v) { nameInput.focus(); return; }
+    if (mode.kind === 'room') {
+      if (mode.op === 'add') DB.addRoom(place.id, v, mode.emoji);
+      else DB.updateRoom(mode.id, { name: v, emoji: mode.emoji });
+    } else {
+      if (mode.op === 'add') DB.addFurniture(place.id, mode.roomId, v);
+      else DB.updateFurniture(mode.id, { name: v });
+    }
+    closeSheet();
+    render();
+  };
+
+  // —— 树上事件代理 ——
+  document.getElementById('treeRoot').addEventListener('click', e => {
+    const editFurn = e.target.closest('.tree-furn .tf-act.edit');
+    const delFurn = e.target.closest('.tree-furn .tf-act.del');
+    const furnRow = e.target.closest('.tree-furn');
+    if (editFurn && furnRow) { openSheet({ kind: 'furn', op: 'edit', id: furnRow.dataset.furn }); return; }
+    if (delFurn && furnRow) {
+      if (confirm('删除该家具？物品记录会保留，但位置会被清空。')) {
+        DB.deleteFurniture(furnRow.dataset.furn); render();
+      }
+      return;
+    }
+    const roomEl = e.target.closest('.tree-room'); if (!roomEl) return;
+    const rid = roomEl.dataset.room;
+    if (e.target.closest('.add-furn')) { openSheet({ kind: 'furn', op: 'add', roomId: rid }); return; }
+    if (e.target.closest('.tr-act.edit')) { openSheet({ kind: 'room', op: 'edit', id: rid }); return; }
+    if (e.target.closest('.tr-act.del')) {
+      const r = DB.getRoom(rid);
+      const furnCount = DB.getFurnituresByRoom(rid).length;
+      const msg = furnCount ? `房间「${r.name}」下有 ${furnCount} 件家具，删除后家具位置会清空。确认删除？` : `删除房间「${r.name}」？`;
+      if (confirm(msg)) { DB.deleteRoom(rid); render(); }
+      return;
+    }
+    // 点头部空白：折叠/展开
+    if (e.target.closest('.tree-room-head')) {
+      roomEl.querySelector('.tree-room-body').classList.toggle('collapsed');
+    }
+  });
+
+  document.getElementById('addRoomBtn').onclick = () => openSheet({ kind: 'room', op: 'add' });
+
+  render();
+})();
+</script>
+</body>
+</html>

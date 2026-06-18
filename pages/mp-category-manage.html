@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 分类管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .topbar .back-btn { justify-self: start; }
+  .topbar .topbar-title { justify-self: center; }
+
+  .cat-pad { padding: 8px 24px calc(40px + env(safe-area-inset-bottom)); }
+
+  /* 场所切换提示 */
+  .place-hint {
+    padding: 10px 14px; background: var(--washi-2); border-radius: var(--r-md);
+    font-size: 11px; color: var(--sumi-2); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .place-hint strong { color: var(--indigo); }
+  .place-hint .pi { width: 16px; height: 16px; }
+
+  /* 分类树 */
+  .cat-tree { margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--paper); overflow: hidden; }
+  .cat-top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .cat-top:last-child { border-bottom: none; }
+  .cat-top .ct-emoji { font-size: 20px; width: 26px; text-align: center; }
+  .cat-top .ct-name { flex: 1; font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--sumi); }
+  .cat-top .ct-count { font-family: var(--font-serif); font-size: 12px; color: var(--kincha); }
+  .cat-top .ct-act { font-size: 16px; color: var(--sumi-3); cursor: pointer; padding: 4px 6px; line-height: 1; }
+  .cat-top .ct-act.del { color: var(--danger); }
+  .cat-top .ct-preset { font-size: 9px; color: var(--sumi-3); border: 1px solid var(--line-2); padding: 1px 5px; border-radius: var(--r-sm); }
+  .cat-top .ct-arrow { font-size: 10px; color: var(--sumi-3); transition: transform 0.2s; }
+  .cat-top.collapsed .ct-arrow { transform: rotate(-90deg); }
+  .cat-sub-wrap { padding: 4px 16px 12px 54px; }
+  .cat-sub-wrap.collapsed { display: none; }
+
+  /* 子分类 */
+  .cat-sub-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; background: var(--washi); border: 1px solid var(--line-2);
+    border-radius: 999px; font-size: 12px; color: var(--sumi-2); margin: 4px 4px 0 0;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .cat-sub-chip:hover { border-color: var(--indigo); color: var(--indigo); }
+  .cat-sub-chip .csc-del { font-size: 10px; opacity: 0.5; }
+  .cat-sub-add {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border: 1px dashed var(--line-2); border-radius: 999px;
+    font-size: 12px; color: var(--sumi-3); margin: 4px 4px 0; cursor: pointer;
+  }
+  .cat-sub-add:hover { color: var(--indigo); border-color: var(--indigo); }
+
+  /* 新增顶层分类 */
+  .add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px; border: 1px dashed var(--line-2); border-radius: var(--r-lg);
+    color: var(--sumi-2); font-size: 14px; cursor: pointer; text-decoration: none;
+    transition: all 0.2s;
+  }
+  .add-btn:hover { border-color: var(--indigo); color: var(--indigo); }
+
+  .block-head {
+    font-family: var(--font-serif); font-size: 13px; color: var(--sumi); font-weight: 700;
+    letter-spacing: 2px; margin: 20px 0 12px;
+  }
+  .block-head .bh-no { color: var(--bengara); margin-right: 8px; }
+
+  .empty-mini { padding: 32px 16px; text-align: center; color: var(--sumi-3); font-size: 13px; }
+
+  /* —— 编辑悬浮面板 —— */
+  .sheet-mask { position: fixed; inset: 0; background: rgba(42,39,35,0.4); z-index: 80; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: var(--paper);
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); max-height: 80vh;
+    display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(42,39,35,0.15);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sheet.open { transform: translateY(0); }
+  @media (min-width: 481px) { .sheet { left: 50%; transform: translate(-50%, 100%); width: 390px; } .sheet.open { transform: translate(-50%, 0); } }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 20px 12px; border-bottom: 1px solid var(--line); }
+  .sheet-title { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--sumi); }
+  .sheet-close { font-size: 22px; color: var(--sumi-3); cursor: pointer; line-height: 1; padding: 4px; }
+  .sheet-body { padding: 16px 20px; }
+  .sf-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 6px; }
+  .sf-input {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--line-2);
+    border-radius: var(--r-md); font-size: 14px; font-family: var(--font-sans);
+    color: var(--sumi); background: var(--washi); outline: none; transition: border-color 0.2s;
+  }
+  .sf-input:focus { border-color: var(--indigo); }
+  .sf-row { margin-bottom: 16px; }
+  .emoji-pick { display: flex; gap: 8px; flex-wrap: wrap; }
+  .emoji-pick .ep { font-size: 22px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; background: var(--washi); }
+  .emoji-pick .ep.active { border-color: var(--indigo); background: var(--paper); box-shadow: 0 0 0 2px rgba(52,92,92,0.15); }
+  .sheet-foot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .sheet-foot .btn-cancel { flex: 0 0 90px; background: transparent; color: var(--sumi-2); border: 1px solid var(--line-2); padding: 13px; border-radius: var(--r-md); font-size: 14px; cursor: pointer; font-family: var(--font-sans); }
+  .sheet-foot .btn-confirm { flex: 1; background: var(--sumi); color: var(--paper); padding: 13px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; letter-spacing: 2px; text-align: center; cursor: pointer; border: none; font-family: var(--font-sans); }
+</style>
+<script src="../assets/store.js"></script>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-profile.html">‹</a>
+      <div class="topbar-title">分类管理</div>
+      <span style="width: 28px;"></span>
+    </div>
+
+    <div class="scroll">
+      <div class="cat-pad">
+        <div class="place-hint" id="placeHint">
+          <span class="pi" id="hintIcon"></span>
+          当前管理:<strong id="hintName">我们家</strong>的分类(每场所独立)
+        </div>
+
+        <div class="block-head"><span class="bh-no">01</span>分类列表</div>
+
+        <div id="catRoot"></div>
+
+        <a class="add-btn" id="addTopBtn">+ 新增分类</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑面板 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title" id="sheetTitle">新增分类</div>
+      <span class="sheet-close" id="sheetClose">×</span>
+    </div>
+    <div class="sheet-body">
+      <div class="sf-row">
+        <div class="sf-label">图标</div>
+        <div class="emoji-pick" id="emojiPick"></div>
+      </div>
+      <div class="sf-row">
+        <div class="sf-label" id="nameLabel">分类名称</div>
+        <input class="sf-input" id="nameInput" placeholder="如：衣物" maxlength="12">
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-cancel" id="btnCancel">取消</button>
+      <button class="btn-confirm" id="btnConfirm">保存</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const EMOJIS = ['👕','👖','🍱','📚','🎮','💊','🧴','🛒','🧸','💡','🔧','📦','🎨','🎁','✨','🏷️'];
+  const place = DB.getCurrentPlace();
+
+  const hintIcon = document.getElementById('hintIcon');
+  hintIcon.className = 'pi ' + (place.iconClass || 'pi-home');
+  document.getElementById('hintName').textContent = place.name;
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function render() {
+    const root = document.getElementById('catRoot');
+    const tops = DB.getTopCategories(place.id);
+    const items = DB.getItems(place.id);
+    if (tops.length === 0) {
+      root.innerHTML = '<div class="empty-mini">还没有分类，点击下方新增</div>';
+      return;
+    }
+    root.innerHTML = tops.map(top => {
+      const subs = DB.getSubCategories(top.id);
+      const topCount = items.filter(i => i.categoryId === top.id || subs.some(s => s.id === i.categoryId)).length;
+      const presetTag = top.isPreset ? '<span class="ct-preset">预设</span>' : '';
+      const subHtml = subs.length ? subs.map(s => {
+        const sc = items.filter(i => i.categoryId === s.id).length;
+        return `<span class="cat-sub-chip" data-sub="${s.id}">${escapeHtml(s.icon || '🏷️')} ${escapeHtml(s.name)} <span class="csc-count" style="color:var(--kincha);font-family:var(--font-serif);">${sc || ''}</span> <span class="csc-del" data-del>✕</span></span>`;
+      }).join('') : '';
+      return `<div class="cat-tree" data-top="${top.id}">
+        <div class="cat-top">
+          <span class="ct-emoji">${escapeHtml(top.icon || '🏷️')}</span>
+          <span class="ct-name">${escapeHtml(top.name)}</span>
+          ${presetTag}
+          <span class="ct-count">${topCount}</span>
+          <span class="ct-arrow">▾</span>
+          <span class="ct-act edit" title="编辑">✎</span>
+          <span class="ct-act del" title="删除">✕</span>
+        </div>
+        <div class="cat-sub-wrap">
+          ${subHtml}
+          <span class="cat-sub-add" data-addsub>+</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // —— 编辑面板 ——
+  const sheetMask = document.getElementById('sheetMask');
+  const sheet = document.getElementById('sheet');
+  const sheetTitle = document.getElementById('sheetTitle');
+  const sheetClose = document.getElementById('sheetClose');
+  const btnCancel = document.getElementById('btnCancel');
+  const btnConfirm = document.getElementById('btnConfirm');
+  const nameInput = document.getElementById('nameInput');
+  const nameLabel = document.getElementById('nameLabel');
+  const emojiPick = document.getElementById('emojiPick');
+  let mode = null; // { kind: 'top'|'sub', op, parentId?, id?, emoji? }
+
+  emojiPick.innerHTML = EMOJIS.map(e => `<span class="ep" data-e="${e}">${e}</span>`).join('');
+  emojiPick.addEventListener('click', e => {
+    const t = e.target.closest('.ep'); if (!t) return;
+    emojiPick.querySelectorAll('.ep').forEach(n => n.classList.remove('active'));
+    t.classList.add('active'); mode.emoji = t.dataset.e;
+  });
+
+  function openSheet(m) {
+    mode = m;
+    nameLabel.textContent = m.kind === 'top' ? '分类名称' : '子分类名称';
+    sheetTitle.textContent = m.op === 'add' ? (m.kind === 'top' ? '新增分类' : '新增子分类') : '编辑分类';
+    if (m.op === 'edit') {
+      const c = DB.getCategory(m.id);
+      nameInput.value = c.name;
+      mode.emoji = c.icon || '🏷️';
+    } else {
+      nameInput.value = '';
+      mode.emoji = m.kind === 'top' ? '📦' : '🏷️';
+    }
+    emojiPick.querySelectorAll('.ep').forEach(n => n.classList.toggle('active', n.dataset.e === mode.emoji));
+    sheetMask.classList.add('open'); sheet.classList.add('open');
+    setTimeout(() => nameInput.focus(), 300);
+  }
+  function closeSheet() { sheetMask.classList.remove('open'); sheet.classList.remove('open'); mode = null; }
+  sheetClose.onclick = btnCancel.onclick = closeSheet;
+  sheetMask.onclick = closeSheet;
+
+  btnConfirm.onclick = () => {
+    if (!mode) return;
+    const v = nameInput.value.trim();
+    if (!v) { nameInput.focus(); return; }
+    if (mode.op === 'add') {
+      if (mode.kind === 'top') DB.addCategory(place.id, v, null, mode.emoji);
+      else DB.addCategory(place.id, v, mode.parentId, mode.emoji);
+    } else {
+      DB.updateCategory(mode.id, { name: v, icon: mode.emoji });
+    }
+    closeSheet(); render();
+  };
+
+  // —— 事件代理 ——
+  document.getElementById('catRoot').addEventListener('click', e => {
+    const tree = e.target.closest('.cat-tree'); if (!tree) return;
+    const topId = tree.dataset.top;
+    const top = DB.getCategory(topId);
+    // 删子分类
+    if (e.target.closest('[data-del]')) {
+      const chip = e.target.closest('.cat-sub-chip');
+      if (confirm('删除该子分类？关联物品的分类会被清空。')) { DB.deleteCategory(chip.dataset.sub); render(); }
+      return;
+    }
+    // 编辑子分类
+    const chip = e.target.closest('.cat-sub-chip');
+    if (chip && !e.target.closest('[data-del]')) { openSheet({ kind: 'sub', op: 'edit', id: chip.dataset.sub }); return; }
+    // 添加子分类
+    if (e.target.closest('[data-addsub]')) { openSheet({ kind: 'sub', op: 'add', parentId: topId }); return; }
+    // 编辑顶层
+    if (e.target.closest('.ct-act.edit')) { openSheet({ kind: 'top', op: 'edit', id: topId }); return; }
+    // 删除顶层
+    if (e.target.closest('.ct-act.del')) {
+      const subs = DB.getSubCategories(topId);
+      const msg = subs.length ? `分类「${top.name}」下有 ${subs.length} 个子分类，将一并删除。物品的分类引用会保留显示名。确认删除？` : `删除分类「${top.name}」？`;
+      if (confirm(msg)) { DB.deleteCategory(topId); render(); }
+      return;
+    }
+    // 折叠
+    if (e.target.closest('.cat-top')) {
+      const topEl = tree.querySelector('.cat-top');
+      const subWrap = tree.querySelector('.cat-sub-wrap');
+      topEl.classList.toggle('collapsed');
+      subWrap.classList.toggle('collapsed');
+    }
+  });
+
+  document.getElementById('addTopBtn').onclick = () => openSheet({ kind: 'top', op: 'add' });
+
+  render();
+})();
+</script>
+</body>
+</html>

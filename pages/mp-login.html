@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 登录</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .login-wrap {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: space-between; padding: 0 32px 40px;
+  }
+  .login-hero { padding-top: 100px; text-align: center; }
+  .login-logo {
+    font-family: var(--font-serif); font-size: 56px; font-weight: 700;
+    color: var(--sumi); letter-spacing: 8px; margin-bottom: 12px;
+  }
+  .login-logo .accent { color: var(--indigo); }
+  .login-slogan {
+    font-family: var(--font-serif); font-size: 16px; color: var(--sumi-2);
+    letter-spacing: 4px;
+  }
+  .login-illustration {
+    margin: 60px auto; width: 200px; height: 200px;
+    border-radius: 50%; overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .login-illustration img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.85); }
+  .login-actions { }
+  .btn-wechat {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--sumi); color: var(--paper);
+    padding: 15px; border-radius: var(--r-lg); font-size: 15px; font-weight: 600;
+    text-decoration: none; letter-spacing: 2px; transition: all 0.2s ease;
+  }
+  .btn-wechat:hover { background: var(--indigo-deep); }
+  .login-agreement {
+    margin-top: 18px; text-align: center; font-size: 11px; color: var(--sumi-3); line-height: 1.8;
+  }
+  .login-agreement a { color: var(--indigo); text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+    <div class="login-wrap">
+      <div class="login-hero">
+        <div class="login-logo">纳<span class="accent">里</span></div>
+        <div class="login-slogan">知物之所,归于有序</div>
+        <div class="login-illustration">
+          <img src="https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=400&q=70&auto=format&fit=crop" alt="家">
+        </div>
+      </div>
+      <div class="login-actions">
+        <a class="btn-wechat" href="#" id="loginBtn">
+          <span>微</span><span>信一键登录</span>
+        </a>
+        <div class="login-agreement">
+          登录即同意 <a href="#">《用户协议》</a> 与 <a href="#">《隐私政策》</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="../assets/store.js"></script>
+  <script>
+    // 已登录直接跳首页
+    DB.init();
+    if (DB.isLoggedIn()) location.href = 'mp-home.html';
+
+    // 点击登录(mock):初始化数据,跳首页
+    document.getElementById('loginBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      DB.init();
+      location.href = 'mp-home.html';
+    });
+  </script>
+</body>
+</html>

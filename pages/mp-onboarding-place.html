@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 创建场所</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  .content-pad { padding: 0 24px 32px; }
+  .intro { margin-bottom: 32px; }
+  .intro .step { font-size: 11px; color: var(--bengara); letter-spacing: 3px; font-family: var(--font-serif); font-weight: 700; }
+  .intro h2 { font-family: var(--font-serif); font-size: 28px; color: var(--sumi); margin-top: 10px; line-height: 1.4; }
+  .intro .sub { font-size: 13px; color: var(--sumi-2); margin-top: 8px; line-height: 1.6; }
+
+  /* 场所类型选择 */
+  .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 28px; }
+  .type-card {
+    border: 1px solid var(--line-2); border-radius: var(--r-lg);
+    padding: 18px 14px; text-align: center; cursor: pointer;
+    background: var(--paper); transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  .type-card:hover { border-color: var(--sumi); }
+  .type-card.selected { border-color: var(--indigo); background: var(--washi-2); }
+  .type-card .ticon { font-size: 30px; }
+  .type-card .tname {
+    font-family: var(--font-serif); font-size: 15px; font-weight: 700;
+    color: var(--sumi); margin-top: 8px;
+  }
+  .type-card .tdesc { font-size: 11px; color: var(--sumi-3); margin-top: 4px; }
+
+  .limit-tip {
+    font-size: 11px; color: var(--sumi-3); text-align: center;
+    margin-top: 20px; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-login.html">‹</a>
+    </div>
+
+    <div class="scroll">
+      <div class="content-pad">
+        <div class="intro">
+          <div class="step">STEP 01</div>
+          <h2>创建你的<br>第一个场所</h2>
+          <div class="sub">场所是你管理物品的容器。可以是家、房车、工作室——任何需要"知道东西在哪"的地方。</div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">场所名称 <span class="req">*</span></label>
+          <input class="input" id="placeNameInput" type="text" placeholder="如:我们家" value="" maxlength="12">
+        </div>
+
+        <div class="field">
+          <label class="field-label">场所类型</label>
+          <div class="type-grid">
+            <div class="type-card selected" data-type="home" data-icon="pi-home">
+              <div class="ticon"><span class="pi pi-home"></span></div>
+              <div class="tname">家</div>
+              <div class="tdesc">住所、公寓</div>
+            </div>
+            <div class="type-card" data-type="rv" data-icon="pi-rv">
+              <div class="ticon"><span class="pi pi-rv"></span></div>
+              <div class="tname">房车</div>
+              <div class="tdesc">移动空间</div>
+            </div>
+            <div class="type-card" data-type="studio" data-icon="pi-studio">
+              <div class="ticon"><span class="pi pi-studio"></span></div>
+              <div class="tname">工作室</div>
+              <div class="tdesc">工作场地</div>
+            </div>
+            <div class="type-card" data-type="other" data-icon="pi-home">
+              <div class="ticon">📦</div>
+              <div class="tname">其他</div>
+              <div class="tdesc">仓库、储物等</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="createBtn">创建场所</button>
+        <div class="limit-tip">每位用户最多创建 3 个场所 · 创建后可邀请家人共同管理</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    DB.init();
+    // 类型选择
+    document.querySelectorAll('.type-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+      });
+    });
+    // 创建场所
+    document.getElementById('createBtn').addEventListener('click', () => {
+      const name = document.getElementById('placeNameInput').value.trim();
+      if (!name) { alert('请输入场所名称'); document.getElementById('placeNameInput').focus(); return; }
+      const sel = document.querySelector('.type-card.selected');
+      const type = sel ? sel.dataset.type : 'home';
+      const iconClass = sel ? sel.dataset.icon : 'pi-home';
+      const created = DB.addPlace(name, type, iconClass);
+      if (!created) { alert('每位用户最多创建 3 个场所'); return; }
+      DB.setCurrentPlace(created.id);
+      location.href = 'mp-home.html';
+    });
+  </script>
+</body>
+</html>

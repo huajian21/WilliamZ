@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 添加物品</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  /* 添加页标题居中（三栏 grid，标题自然居中） */
+  .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .topbar .back-btn { justify-self: start; }
+  .topbar .topbar-title { justify-self: center; }
+  .topbar .topbar-place { justify-self: end; }
+
+  /* —— 拍照识别区 —— */
+  .recognize-stage {
+    margin: 0 24px 16px; border-radius: var(--r-lg); overflow: hidden;
+    position: relative; background: var(--paper);
+    box-shadow: 0 4px 14px rgba(42,39,35,0.08);
+  }
+  .recognize-img {
+    width: 100%; height: 180px; object-fit: cover; display: block; filter: saturate(0.88);
+  }
+  /* 空状态：未拍照时的占位入口 */
+  .recognize-empty {
+    height: 180px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    background: var(--washi-2); border: 1px dashed var(--line-2);
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .recognize-empty:hover { border-color: var(--indigo); background: var(--paper); }
+  .recognize-empty .re-icon { font-size: 38px; color: var(--sumi-3); line-height: 1; }
+  .recognize-empty .re-title { font-family: var(--font-serif); font-size: 14px; color: var(--sumi-2); font-weight: 700; letter-spacing: 2px; }
+  .recognize-empty .re-sub { font-size: 11px; color: var(--sumi-3); }
+  .ai-badge {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(52,92,92,0.92); color: #fff; font-size: 10px;
+    padding: 4px 11px; border-radius: var(--r-sm); letter-spacing: 1px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .ai-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #A8C09A; }
+  .re-shoot {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(42,39,35,0.6); color: #fff; font-size: 11px;
+    padding: 5px 10px; border-radius: var(--r-sm); cursor: pointer;
+    border: none; font-family: var(--font-sans);
+  }
+  /* 名称 + 数量（卡片内） */
+  .name-bar {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .name-bar .nb-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 2px; font-weight: 500; flex-shrink: 0; }
+  .name-bar .nb-input {
+    flex: 1; border: none; background: transparent; outline: none; min-width: 0;
+    font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: var(--sumi);
+    border-bottom: 1px solid var(--line); padding-bottom: 6px;
+  }
+  .name-bar .nb-input:focus { border-bottom-color: var(--indigo); }
+  .name-bar .nb-input::placeholder { color: var(--sumi-3); font-weight: 400; }
+  .name-bar .nb-qty { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .name-bar .nb-qty-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 2px; font-weight: 500; }
+
+  /* 步进器（通用） */
+  .stepper { display: flex; align-items: center; gap: 0; width: fit-content; }
+  .stepper button {
+    width: 32px; height: 32px; border: 1px solid var(--line-2); background: var(--washi);
+    color: var(--sumi); font-size: 16px; cursor: pointer; font-family: var(--font-sans); transition: all 0.2s;
+  }
+  .stepper button:first-child { border-radius: var(--r-md) 0 0 var(--r-md); }
+  .stepper button:last-child { border-radius: 0 var(--r-md) var(--r-md) 0; border-left: none; }
+  .stepper .step-val {
+    width: 40px; height: 32px; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--sumi);
+  }
+
+  /* 步进器（通用） */
+  .stepper { display: flex; align-items: center; gap: 0; width: fit-content; }
+  .stepper button {
+    width: 36px; height: 36px; border: 1px solid var(--line-2); background: var(--washi);
+    color: var(--sumi); font-size: 18px; cursor: pointer; font-family: var(--font-sans); transition: all 0.2s;
+  }
+  .stepper button:first-child { border-radius: var(--r-md) 0 0 var(--r-md); }
+  .stepper button:last-child { border-radius: 0 var(--r-md) var(--r-md) 0; border-left: none; }
+
+  /* 标题栏右上角场所下拉（紧凑） */
+  .stepper button:hover { background: var(--paper); border-color: var(--sumi); }
+  .stepper .step-val {
+    width: 48px; height: 36px; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--sumi);
+  }
+
+  /* —— AI 建议区（一键采用）—— */
+  .suggest-block { margin: 16px 24px; }
+  .suggest-card {
+    background: var(--washi-2); border: 1px solid var(--line);
+    border-left: 3px solid var(--indigo); border-radius: var(--r-md);
+    padding: 12px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .suggest-card .sc-info { flex: 1; }
+  .suggest-card .sc-label { font-size: 10px; color: var(--sumi-3); letter-spacing: 1px; }
+  .suggest-card .sc-value {
+    font-family: var(--font-serif); font-size: 14px; font-weight: 700; color: var(--sumi);
+    margin-top: 2px;
+  }
+  .suggest-card .sc-value .sep { color: var(--sumi-3); margin: 0 4px; font-weight: 400; }
+  .suggest-card .sc-why { font-size: 10px; color: var(--sumi-3); margin-top: 2px; font-style: italic; }
+  .adopt-btn {
+    background: var(--indigo); color: #fff; font-size: 12px; font-weight: 600;
+    padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; border: none;
+    font-family: var(--font-sans); white-space: nowrap; transition: all 0.2s;
+  }
+  .adopt-btn:hover { background: var(--indigo-deep); }
+  .adopt-btn.adopted { background: var(--paper); color: var(--indigo); border: 1px solid var(--indigo); }
+
+  /* 手动按钮（采用按钮旁） */
+  .manual-btn {
+    background: transparent; color: var(--sumi-2); font-size: 12px; font-weight: 600;
+    padding: 7px 12px; border-radius: var(--r-sm); cursor: pointer;
+    border: 1px solid var(--line-2); font-family: var(--font-sans); white-space: nowrap; transition: all 0.2s;
+  }
+  .manual-btn:hover { color: var(--indigo); border-color: var(--indigo); }
+  .suggest-card .sc-btns { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* —— 底部悬浮面板（手动选择）—— */
+  .sheet-mask {
+    position: fixed; inset: 0; background: rgba(42,39,35,0.4);
+    z-index: 80; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    background: var(--paper); border-radius: 16px 16px 0 0;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0.3s;
+    max-height: 75vh; display: flex; flex-direction: column;
+    box-shadow: 0 -8px 30px rgba(42,39,35,0.15);
+    visibility: hidden;   /* 防止 transform 失效时面板暴露，把页面撑歪 */
+  }
+  .sheet.open { transform: translateY(0); visibility: visible; }
+  @media (min-width: 481px) { .sheet { left: 50%; transform: translate(-50%, 100%); width: 390px; } .sheet.open { transform: translate(-50%, 0); } }
+  .sheet-handle {
+    width: 36px; height: 4px; background: var(--line-2); border-radius: 2px;
+    margin: 10px auto 6px; flex-shrink: 0;
+  }
+  .sheet-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 20px 12px; border-bottom: 1px solid var(--line); flex-shrink: 0;
+  }
+  .sheet-head .sh-title {
+    font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--sumi); letter-spacing: 2px;
+  }
+  .sheet-head .sh-cur { font-size: 11px; color: var(--indigo); font-family: var(--font-serif); }
+  .sheet-head .sh-close {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--washi-2);
+    display: flex; align-items: center; justify-content: center; color: var(--sumi-2);
+    cursor: pointer; font-size: 14px; border: none; font-family: var(--font-sans);
+  }
+  .sheet-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .sheet-body::-webkit-scrollbar { width: 0; }
+  .sheet-foot {
+    flex-shrink: 0; padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line); display: flex; gap: 10px;
+  }
+  .sheet-foot .btn-confirm {
+    flex: 1; background: var(--sumi); color: var(--paper); padding: 13px; border-radius: var(--r-md);
+    font-size: 14px; font-weight: 600; letter-spacing: 2px; text-align: center; cursor: pointer;
+    border: none; font-family: var(--font-sans);
+  }
+  .sheet-foot .btn-confirm:hover { background: var(--indigo-deep); }
+
+  /* 面板内：横滑卡片层（卡片等大） */
+  .sheet-level { margin-bottom: 18px; }
+  .sheet-level:last-child { margin-bottom: 8px; }
+  .sheet-level .sl-label {
+    font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .sheet-level .sl-scroll {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  }
+  .sheet-level .sl-scroll::-webkit-scrollbar { display: none; }
+  /* 统一卡片尺寸 */
+  .sl-card {
+    flex-shrink: 0; width: 72px; padding: 10px 4px; text-align: center;
+    background: var(--washi); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    cursor: pointer; transition: all 0.2s; box-sizing: border-box;
+  }
+  .sl-card:hover { border-color: var(--sumi); }
+  .sl-card.selected { border-color: var(--indigo); background: var(--paper); }
+  .sl-card .slc-emoji { font-size: 24px; }
+  .sl-card .slc-name {
+    font-size: 11px; color: var(--sumi); margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sl-card.selected .slc-name { color: var(--indigo); font-weight: 600; }
+  /* 纯文字卡片（层位等）也等大 */
+  .sl-card-text {
+    flex-shrink: 0; min-width: 72px; padding: 10px 12px; text-align: center;
+    background: var(--washi); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    cursor: pointer; transition: all 0.2s; font-size: 13px; color: var(--sumi-2);
+    box-sizing: border-box; white-space: nowrap;
+  }
+  .sl-card-text:hover { border-color: var(--sumi); }
+  .sl-card-text.selected { border-color: var(--indigo); color: var(--indigo); background: var(--paper); font-weight: 600; }
+
+  /* —— 手动选择区（C 方案兜底）—— */
+  .manual-section {
+    margin: 0 24px 16px; border-top: 1px dashed var(--line-2); padding-top: 16px;
+  }
+  .manual-toggle {
+    font-size: 12px; color: var(--sumi-3); cursor: pointer; text-align: center;
+    padding: 8px; transition: color 0.2s;
+  }
+  .manual-toggle:hover { color: var(--indigo); }
+  .manual-body { display: none; padding-top: 12px; }
+  .manual-body.open { display: block; }
+  .manual-body.open .manual-toggle { display: none; }
+  .manual-section.open .manual-toggle .mt-text::before { content: '▲ 手动选择'; }
+  .manual-toggle .mt-text::before { content: '▼ 推荐不准?手动选择'; }
+
+  .ms-field { margin-bottom: 16px; }
+  .ms-label {
+    font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ms-label .ms-cur { font-family: var(--font-serif); color: var(--indigo); font-weight: 600; }
+
+  /* 场所选择 */
+  .place-pick { display: flex; gap: 6px; }
+  .place-pick-item {
+    flex: 1; padding: 9px 4px; text-align: center; font-size: 12px;
+    background: var(--paper); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    cursor: pointer; transition: all 0.2s; color: var(--sumi-2);
+  }
+  .place-pick-item.selected { border-color: var(--indigo); color: var(--indigo); background: var(--washi-2); font-weight: 600; }
+  .place-pick-item .ppi-icon { margin-right: 3px; }
+
+  /* 分类卡片网格 */
+  .cat-pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .cat-pick {
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 9px 4px; text-align: center; cursor: pointer; transition: all 0.2s;
+  }
+  .cat-pick:hover { border-color: var(--sumi); }
+  .cat-pick.selected { border-color: var(--indigo); background: var(--washi-2); }
+  .cat-pick .cp-emoji { font-size: 20px; }
+  .cat-pick .cp-name { font-size: 10px; color: var(--sumi); margin-top: 3px; }
+  .cat-pick.selected .cp-name { color: var(--indigo); font-weight: 600; }
+
+  /* 子分类横滑 */
+  .subcat-pick-scroll {
+    display: flex; gap: 6px; overflow-x: auto; margin-top: 8px;
+  }
+  .subcat-pick-scroll::-webkit-scrollbar { display: none; }
+  .subcat-chip-pick {
+    flex-shrink: 0; padding: 6px 12px; background: var(--paper);
+    border: 1px solid var(--line-2); border-radius: 999px; font-size: 12px;
+    color: var(--sumi-2); cursor: pointer; transition: all 0.2s;
+  }
+  .subcat-chip-pick.selected { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+
+  /* 位置横向滑选（每级） */
+  .loc-pick-level { margin-bottom: 10px; }
+  .loc-pick-label { font-size: 10px; color: var(--sumi-3); margin-bottom: 4px; }
+  .loc-pick-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .loc-pick-scroll::-webkit-scrollbar { display: none; }
+  .loc-pick-item {
+    flex-shrink: 0; padding: 8px 12px; background: var(--paper);
+    border: 1px solid var(--line-2); border-radius: var(--r-md); font-size: 12px;
+    color: var(--sumi-2); cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .loc-pick-item.selected { border-color: var(--indigo); color: var(--indigo); background: var(--washi-2); font-weight: 600; }
+  .loc-pick-item .lpi-icon { font-size: 14px; }
+
+  /* 标题栏右上角场所下拉（紧凑） */
+  .topbar-place {
+    height: 32px; padding: 0 10px; font-size: 12px;
+    background: var(--paper); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    color: var(--sumi); font-family: var(--font-sans); outline: none; cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 10 6'%3E%3Cpath fill='%23A8A296' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+    padding-right: 22px;
+  }
+  .topbar-place:focus { border-color: var(--indigo); }
+
+  /* —— 价格备注区（紧凑，单价标签与价格同行）—— */
+  .price-card {
+    margin: 0 24px 16px; padding: 8px 14px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-lg);
+  }
+  .pc-field { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .pc-field:last-child { border-bottom: none; padding-bottom: 6px; }
+  .pc-field:first-child { padding-top: 6px; }
+  /* 单价行：标签左、价格右，同一行 */
+  .pc-price-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .pc-price-row .pc-plabel { font-size: 11px; color: var(--sumi-3); letter-spacing: 2px; font-weight: 500; flex-shrink: 0; }
+  .pc-price-row .pc-pwrap { display: flex; align-items: baseline; gap: 3px; }
+  .pc-price-row .yen { font-family: var(--font-serif); font-size: 15px; color: var(--sumi-2); font-weight: 700; }
+  .pc-price-row .price-input {
+    width: 80px; border: none; background: transparent; outline: none; text-align: right;
+    font-family: var(--font-serif); font-size: 22px; color: var(--sumi); font-weight: 700; padding: 0;
+  }
+  .pc-price-row .price-unit { font-size: 11px; color: var(--sumi-3); }
+  /* 备注 */
+  .pc-remark {
+    width: 100%; border: none; background: transparent; outline: none;
+    font-size: 13px; color: var(--sumi); font-family: var(--font-sans); padding: 2px 0;
+  }
+  .pc-remark::placeholder { color: var(--sumi-3); }
+  /* 照片区（80px，约占框内 1/4 宽度） */
+  .pc-photos { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pc-photo {
+    width: 80px; height: 80px; border-radius: var(--r-md); overflow: hidden;
+    border: 1px solid var(--line); position: relative; flex-shrink: 0;
+  }
+  .pc-photo img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.88); }
+  .pc-photo .pc-photo-del {
+    position: absolute; top: 3px; right: 3px; width: 20px; height: 20px;
+    background: rgba(42,39,35,0.6); color: #fff; border-radius: 50%;
+    font-size: 12px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; line-height: 1;
+  }
+  .pc-photo-add {
+    width: 80px; height: 80px; border-radius: var(--r-md);
+    border: 1px dashed var(--line-2); background: var(--washi);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--sumi-3); cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+  }
+  .pc-photo-add:hover { color: var(--indigo); border-color: var(--indigo); }
+  .pc-photo-add .ppa-icon { font-size: 26px; line-height: 1; }
+  .pc-photo-add .ppa-text { font-size: 10px; margin-top: 3px; }
+
+  /* —— 底部固定保存条 —— */
+  .save-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--paper); border-top: 1px solid var(--line);
+    padding: 12px 24px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 -4px 16px rgba(42,39,35,0.06);
+  }
+  .save-bar .total-preview { flex: 1; }
+  .save-bar .tp-label { font-size: 10px; color: var(--sumi-3); letter-spacing: 1px; }
+  .save-bar .tp-value { font-family: var(--font-serif); font-size: 20px; font-weight: 700; color: var(--sumi); }
+  .save-bar .tp-value .yen-sm { font-size: 13px; color: var(--sumi-2); margin-right: 2px; }
+  .save-bar .tp-meta { font-size: 10px; color: var(--sumi-3); margin-top: 2px; font-family: var(--font-serif); }
+  .save-bar .save-btn {
+    background: var(--sumi); color: var(--paper); padding: 13px 32px; border-radius: var(--r-md);
+    font-size: 14px; font-weight: 600; letter-spacing: 2px; text-decoration: none;
+    transition: all 0.2s; border: none; cursor: pointer; font-family: var(--font-sans);
+  }
+  .save-bar .save-btn:hover { background: var(--indigo-deep); }
+  @media (min-width: 481px) { .save-bar { left: 50%; transform: translateX(-50%); width: 390px; } }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-home.html">‹</a>
+      <div class="topbar-title">添加物品</div>
+      <select class="topbar-place" id="placeDropdown" onchange="onPlaceChange(this)"></select>
+    </div>
+
+    <div class="scroll" style="padding-bottom: calc(80px + env(safe-area-inset-bottom));">
+      <!-- 拍照识别区（可选辅助：拍完自动填名称，不拍也可手动填） -->
+      <div class="recognize-stage">
+        <!-- 未拍照：占位入口 -->
+        <div class="recognize-empty" id="recogEmpty" onclick="shootRecognize()">
+          <span class="re-icon">📷</span>
+          <span class="re-title">拍照识别</span>
+          <span class="re-sub">点击拍照，自动识别物品名称</span>
+        </div>
+        <!-- 已拍照：图片 + 角标（默认隐藏） -->
+        <img class="recognize-img" id="recogImg" src="" alt="物品" style="display:none;">
+        <div class="ai-badge" id="recogBadge" style="display:none;">AI 已识别</div>
+        <button class="re-shoot" id="recogReshoot" style="display:none;" onclick="shootRecognize()">重拍</button>
+      </div>
+
+      <!-- 名称 + 数量（卡片） -->
+      <div class="price-card">
+        <div class="name-bar">
+          <input class="nb-input" id="nameInput" placeholder="物品名称" maxlength="20">
+          <div class="nb-qty">
+            <span class="nb-qty-label">数量</span>
+            <div class="stepper">
+              <button onclick="adjustQty(-1)">−</button>
+              <div class="step-val" id="qtyVal">1</div>
+              <button onclick="adjustQty(1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI 建议（采用 + 手动）——拍照后显示（识别能力开发阶段接入） -->
+      <div class="suggest-block" id="suggestBlock" style="display:none;">
+        <div class="suggest-card" id="sugCat">
+          <div class="sc-info">
+            <div class="sc-label">建议分类</div>
+            <div class="sc-value">—</div>
+            <div class="sc-why">基于图像识别（开发中）</div>
+          </div>
+          <div class="sc-btns">
+            <button class="manual-btn" onclick="openSheet('cat')">手动选择</button>
+          </div>
+        </div>
+        <div class="suggest-card" id="sugLoc">
+          <div class="sc-info">
+            <div class="sc-label">建议位置</div>
+            <div class="sc-value">—</div>
+            <div class="sc-why">和上次添加放同一处？</div>
+          </div>
+          <div class="sc-btns">
+            <button class="manual-btn" onclick="openSheet('loc')">手动选择</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分类/位置（常驻入口，无论是否拍照都可选；标题+内容同一行，内容居中） -->
+      <div class="price-card">
+        <div class="pc-field" style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:11px;color:var(--sumi-3);letter-spacing:2px;font-weight:500;flex-shrink:0;">分类</span>
+          <div style="flex:1;text-align:center;font-family:var(--font-serif);color:var(--indigo);font-weight:600;font-size:13px;cursor:pointer;border-bottom:1px solid transparent;" id="curCatDisplay" onclick="openSheet('cat')" onmouseover="this.style.borderBottomColor='var(--indigo)'" onmouseout="this.style.borderBottomColor='transparent'">未选择</div>
+          <button class="manual-btn" onclick="openSheet('cat')">选择</button>
+        </div>
+        <div class="pc-field" style="display:flex;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:13px;">
+          <span style="font-size:11px;color:var(--sumi-3);letter-spacing:2px;font-weight:500;flex-shrink:0;">位置</span>
+          <div style="flex:1;text-align:center;font-family:var(--font-serif);color:var(--indigo);font-weight:600;font-size:13px;cursor:pointer;border-bottom:1px solid transparent;" id="curLocDisplay" onclick="openSheet('loc')" onmouseover="this.style.borderBottomColor='var(--indigo)'" onmouseout="this.style.borderBottomColor='transparent'">未选择</div>
+          <button class="manual-btn" onclick="openSheet('loc')">选择</button>
+        </div>
+      </div>
+
+      <!-- 价格与备注 -->
+      <div class="price-card">
+        <div class="pc-field">
+          <div class="pc-price-row">
+            <span class="pc-plabel">单价</span>
+            <div class="pc-pwrap">
+              <span class="yen">¥</span>
+              <input class="price-input" id="priceInput" type="number" value="" placeholder="0" oninput="calcTotal()">
+              <span class="price-unit">/件</span>
+            </div>
+          </div>
+        </div>
+        <div class="pc-field">
+          <input class="pc-remark" placeholder="备注(选填):如去年买的,有点起球">
+        </div>
+        <div class="pc-field">
+          <div class="pc-label" style="font-size:11px;color:var(--sumi-3);letter-spacing:1px;margin-bottom:8px;">照片</div>
+          <div class="pc-photos">
+            <div class="pc-photo-add" onclick="addPhoto(this)">
+              <span class="ppa-icon">+</span>
+              <span class="ppa-text">添加</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部固定保存条 -->
+    <div class="save-bar">
+      <div class="total-preview">
+        <div class="tp-label">合计</div>
+        <div class="tp-value"><span class="yen-sm">¥</span><span id="totalVal">0</span></div>
+        <div class="tp-meta" id="tpMeta">1 件</div>
+      </div>
+      <a class="save-btn" href="#" id="saveBtn">保存</a>
+    </div>
+  </div>
+
+  <!-- 分类选择悬浮面板 -->
+  <div class="sheet-mask" id="catMask" onclick="closeSheet('cat')"></div>
+  <div class="sheet" id="catSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div>
+        <div class="sh-title">选择分类</div>
+        <div class="sh-cur" id="curCat">衣物 / 上衣</div>
+      </div>
+      <button class="sh-close" onclick="closeSheet('cat')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-level">
+        <div class="sl-label">分类</div>
+        <div class="sl-scroll" id="catScroll"></div>
+      </div>
+      <div class="sheet-level">
+        <div class="sl-label">子分类</div>
+        <div class="sl-scroll" id="subcatScroll"></div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-confirm" onclick="closeSheet('cat')">确定</button>
+    </div>
+  </div>
+
+  <!-- 位置选择悬浮面板 -->
+  <div class="sheet-mask" id="locMask" onclick="closeSheet('loc')"></div>
+  <div class="sheet" id="locSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div>
+        <div class="sh-title">选择位置</div>
+        <div class="sh-cur" id="curLoc">主卧 / 衣柜 / 中层</div>
+      </div>
+      <button class="sh-close" onclick="closeSheet('loc')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-level">
+        <div class="sl-label">房间</div>
+        <div class="sl-scroll" id="roomScroll"></div>
+      </div>
+      <div class="sheet-level">
+        <div class="sl-label">家具</div>
+        <div class="sl-scroll" id="furnScroll"></div>
+      </div>
+      <div class="sheet-level">
+        <div class="sl-label">层位</div>
+        <div class="sl-scroll" id="locScroll"></div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-confirm" onclick="closeSheet('loc')">确定</button>
+    </div>
+  </div>
+
+  <script>
+    // 分类数据（按场所类型，V1.3 分类独立）
+    // 当前场所 id（同步场所下拉）
+    function curPlaceId() {
+      return document.getElementById('placeDropdown').value;
+    }
+    const LOC_LEVELS = ['上层', '中层', '下层', '抽屉'];
+
+    // —— 分类面板：从 DB 读取当前场所的顶层分类 + 子分类联动 ——
+    function renderCatCards() {
+      const tops = DB.getTopCategories(curPlaceId());
+      const scroll = document.getElementById('catScroll');
+      scroll.innerHTML = tops.length ? tops.map((c, i) =>
+        `<div class="sl-card ${i === 0 ? 'selected' : ''}" data-id="${c.id}" onclick="pickCat(this,'${c.id}')"><div class="slc-emoji">${c.icon || '🏷️'}</div><div class="slc-name">${c.name}</div></div>`
+      ).join('') : '<div style="font-size:12px;color:var(--sumi-3);padding:10px 0;">该场所暂无分类</div>';
+      // 默认渲染第一个的子级
+      if (tops.length) renderSub(tops[0].id, tops[0].name, tops[0].icon);
+      else {
+        document.getElementById('subcatScroll').innerHTML = '';
+        document.getElementById('curCat').textContent = '未选择';
+      }
+    }
+    function renderSub(topId, topName, topIcon) {
+      const subs = DB.getSubCategories(topId);
+      const subScroll = document.getElementById('subcatScroll');
+      if (subs.length) {
+        subScroll.innerHTML = subs.map((s, i) =>
+          `<div class="sl-card ${i === 0 ? 'selected' : ''}" data-id="${s.id}" onclick="pickSub(this,'${topName}','${s.id}')"><div class="slc-emoji">${s.icon || '🏷️'}</div><div class="slc-name">${s.name}</div></div>`
+        ).join('');
+        document.getElementById('curCat').textContent = topName + ' / ' + subs[0].name;
+      } else {
+        subScroll.innerHTML = '<div class="sl-card" style="opacity:0.5;cursor:default;"><div class="slc-emoji">—</div><div class="slc-name">无子级</div></div>';
+        document.getElementById('curCat').textContent = topName;
+      }
+    }
+    function pickCat(el, topId) {
+      el.parentElement.querySelectorAll('.sl-card').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      const c = DB.getCategory(topId);
+      renderSub(topId, c.name, c.icon);
+      updateMeta();
+    }
+    function pickSub(el, topName) {
+      el.parentElement.querySelectorAll('.sl-card').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      const subName = el.querySelector('.slc-name').textContent;
+      document.getElementById('curCat').textContent = topName + ' / ' + subName;
+      updateMeta();
+    }
+
+    // —— 位置面板：房间 → 家具联动，层位通用 ——
+    function renderLocCards() {
+      const rooms = DB.getRooms(curPlaceId());
+      document.getElementById('roomScroll').innerHTML = rooms.length ? rooms.map((r, i) =>
+        `<div class="sl-card ${i === 0 ? 'selected' : ''}" data-id="${r.id}" onclick="pickRoom(this,'${r.id}')"><div class="slc-emoji">${r.emoji || '🚪'}</div><div class="slc-name">${r.name}</div></div>`
+      ).join('') : '<div style="font-size:12px;color:var(--sumi-3);padding:10px 0;">该场所暂无房间</div>';
+      if (rooms.length) renderFurn(rooms[0].id);
+      else {
+        document.getElementById('furnScroll').innerHTML = '';
+        document.getElementById('curLoc').textContent = '未选择';
+      }
+      document.getElementById('locScroll').innerHTML = LOC_LEVELS.map((l, i) =>
+        `<div class="sl-card ${i === 0 ? 'selected' : ''}" onclick="pickLoc(this)"><div class="slc-emoji">▸</div><div class="slc-name">${l}</div></div>`
+      ).join('');
+    }
+    function renderFurn(roomId) {
+      const furns = DB.getFurnituresByRoom(roomId);
+      document.getElementById('furnScroll').innerHTML = furns.length ? furns.map((f, i) =>
+        `<div class="sl-card ${i === 0 ? 'selected' : ''}" data-id="${f.id}" onclick="pickFurn(this)"><div class="slc-emoji">🗄</div><div class="slc-name">${f.name}</div></div>`
+      ).join('') : '<div class="sl-card" style="opacity:0.5;cursor:default;"><div class="slc-emoji">—</div><div class="slc-name">无家具</div></div>';
+      updateLocPath();
+    }
+    function pickRoom(el, roomId) {
+      el.parentElement.querySelectorAll('.sl-card').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      renderFurn(roomId);
+    }
+    function pickFurn(el) {
+      el.parentElement.querySelectorAll('.sl-card').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      updateLocPath(); updateMeta();
+    }
+    function pickLoc(el) {
+      el.parentElement.querySelectorAll('.sl-card').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      updateLocPath(); updateMeta();
+    }
+    function updateLocPath() {
+      const path = [];
+      ['roomScroll','furnScroll','locScroll'].forEach(id => {
+        const s = document.getElementById(id).querySelector('.selected .slc-name');
+        if (s) path.push(s.textContent.trim());
+      });
+      document.getElementById('curLoc').textContent = path.join(' / ') || '未选择';
+    }
+
+    // 数量+总价
+    let qty = 1;
+    function adjustQty(d) { qty = Math.max(1, qty+d); document.getElementById('qtyVal').textContent = qty; calcTotal(); }
+    function calcTotal() {
+      const p = parseFloat(document.getElementById('priceInput').value) || 0;
+      document.getElementById('totalVal').textContent = p * qty;
+      updateMeta();
+    }
+    function updateMeta() {
+      const meta = document.getElementById('tpMeta');
+      meta.textContent = qty + ' 件 · ' + document.getElementById('curCat').textContent + ' · ' + document.getElementById('curLoc').textContent;
+    }
+
+    // 展开/收起悬浮面板（打开时按当前场所渲染选项）
+    function openSheet(type) {
+      if (type === 'cat') renderCatCards(); else renderLocCards();
+      document.getElementById(type + 'Mask').classList.add('open');
+      document.getElementById(type + 'Sheet').classList.add('open');
+    }
+    function closeSheet(type) {
+      document.getElementById(type + 'Mask').classList.remove('open');
+      document.getElementById(type + 'Sheet').classList.remove('open');
+      // 回填到常驻显示区
+      if (type === 'cat') document.getElementById('curCatDisplay').textContent = document.getElementById('curCat').textContent;
+      if (type === 'loc') document.getElementById('curLocDisplay').textContent = document.getElementById('curLoc').textContent;
+      updateMeta();
+    }
+
+    // 场所下拉切换 → 重渲染分类/位置（跨场所后原选择失效）
+    function onPlaceChange(sel) {
+      renderCatCards();
+      renderLocCards();
+      document.getElementById('curCatDisplay').textContent = document.getElementById('curCat').textContent;
+      document.getElementById('curLocDisplay').textContent = document.getElementById('curLoc').textContent;
+      updateMeta();
+    }
+
+    // 添加照片（真实拍照/相册 + canvas 压缩）
+    // 规格：最长边 1280px，JPEG 质量 0.75。
+    // 原因：手机原图 4-8MB，base64 再 +33%，localStorage 仅 5-10MB，
+    // 不压缩存两张就爆库。压缩后约 100-300KB/张。
+    let photoInput = null;
+    function addPhoto(el) {
+      const wrap = el.parentElement;
+      if (!photoInput) {
+        photoInput = document.createElement('input');
+        photoInput.type = 'file';
+        photoInput.accept = 'image/*';
+        photoInput.capture = 'environment';   // 优先调起相机
+        photoInput.style.display = 'none';
+        photoInput.addEventListener('change', () => {
+          const file = photoInput.files && photoInput.files[0];
+          if (!file) return;
+          compressImage(file, 1280, 0.75, (dataUrl) => {
+            if (!dataUrl) { alert('图片处理失败，请重试'); return; }
+            const newPhoto = document.createElement('div');
+            newPhoto.className = 'pc-photo';
+            newPhoto.innerHTML =
+              '<img src="' + dataUrl + '" alt="">' +
+              '<button class="pc-photo-del" onclick="this.parentElement.remove()">✕</button>';
+            wrap.insertBefore(newPhoto, el);
+          });
+          photoInput.value = '';   // 允许重复选同一张
+        });
+        document.body.appendChild(photoInput);
+      }
+      photoInput.click();
+    }
+
+    // 通用图片压缩：缩放到最长边 maxSize，输出 JPEG dataURL
+    function compressImage(file, maxSize, quality, cb) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > height && width > maxSize) {
+            height = Math.round(height * maxSize / width);
+            width = maxSize;
+          } else if (height >= width && height > maxSize) {
+            width = Math.round(width * maxSize / height);
+            height = maxSize;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          // 白底，避免透明 PNG 压成 JPEG 后变黑
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          cb(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => cb(null);
+        img.src = reader.result;
+      };
+      reader.onerror = () => cb(null);
+      reader.readAsDataURL(file);
+    }
+
+    // 顶部「拍照识别」：调起相机，拍完显示在识别区 + 作为主图入库
+    let recogPhoto = null;   // data-url，识别区拍到的主图
+    let recogInput = null;
+    function shootRecognize() {
+      if (!recogInput) {
+        recogInput = document.createElement('input');
+        recogInput.type = 'file';
+        recogInput.accept = 'image/*';
+        recogInput.capture = 'environment';
+        recogInput.style.display = 'none';
+        recogInput.addEventListener('change', () => {
+          const file = recogInput.files && recogInput.files[0];
+          if (!file) return;
+          compressImage(file, 1280, 0.75, (dataUrl) => {
+            if (!dataUrl) { alert('图片处理失败，请重试'); return; }
+            recogPhoto = dataUrl;
+            const img = document.getElementById('recogImg');
+            img.src = dataUrl;
+            img.style.display = 'block';
+            document.getElementById('recogEmpty').style.display = 'none';
+            document.getElementById('recogBadge').style.display = 'flex';
+            document.getElementById('recogReshoot').style.display = 'block';
+            document.getElementById('suggestBlock').style.display = 'block';
+            // 名称留空让用户填（识别能力开发阶段接入）
+            document.getElementById('nameInput').focus();
+          });
+          recogInput.value = '';
+        });
+        document.body.appendChild(recogInput);
+      }
+      recogInput.click();
+    }
+
+    // 初始渲染：场所下拉（真实 id）+ 分类/位置
+    (function initPlace() {
+      const places = DB.getPlaces();
+      const cur = DB.getCurrentPlace().id;
+      const sel = document.getElementById('placeDropdown');
+      sel.innerHTML = places.map(p => '<option value="' + p.id + '"' + (p.id === cur ? ' selected' : '') + '>' + p.name + '</option>').join('');
+    })();
+    renderCatCards();
+    renderLocCards();
+    document.getElementById('curCatDisplay').textContent = document.getElementById('curCat').textContent;
+    document.getElementById('curLocDisplay').textContent = document.getElementById('curLoc').textContent;
+    updateMeta();
+
+    // ===== 保存物品 =====
+    document.getElementById('saveBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('nameInput').value.trim();
+      if (!name) { alert('请输入物品名称'); return; }
+
+      const qtyVal = parseInt(document.getElementById('qtyVal').textContent) || 1;
+      const priceVal = parseFloat(document.getElementById('priceInput').value) || 0;
+      const remark = document.querySelector('.pc-remark') ? document.querySelector('.pc-remark').value : '';
+      const catText = document.getElementById('curCat').textContent.trim();
+      const locText = document.getElementById('curLoc').textContent.trim();
+
+      // 场所（下拉的 value 即真实 placeId）
+      const placeId = document.getElementById('placeDropdown').value;
+      const place = DB.getPlace(placeId) || DB.getPlaces()[0];
+
+      // 找分类 id（按名称匹配当前场所的分类）
+      const cats = DB.getCategories(place.id);
+      const catParts = catText.split('/').map(s => s.trim());
+      let categoryId = null, categoryName = catText;
+      if (catParts.length >= 2) {
+        const sub = cats.find(c => c.name === catParts[1] && c.parentId);
+        if (sub) categoryId = sub.id;
+      } else if (catParts.length === 1) {
+        const top = cats.find(c => c.name === catParts[0] && !c.parentId);
+        if (top) categoryId = top.id;
+      }
+
+      // 找家具 id（按名称匹配）
+      const locParts = locText.split('/').map(s => s.trim()).filter(Boolean);
+      let furnitureId = null, furnitureName = '', locationName = '';
+      const furns = DB.getFurnitures(place.id);
+      if (locParts.length >= 2) {
+        const furn = furns.find(f => f.name === locParts[1]);
+        if (furn) { furnitureId = furn.id; furnitureName = furn.name; }
+        if (locParts.length >= 3) locationName = locParts[2];
+      }
+
+      // 照片（识别区主图优先 + 底部附加图）
+      const photos = [];
+      if (recogPhoto) photos.push(recogPhoto);
+      document.querySelectorAll('.pc-photo img').forEach(img => photos.push(img.src));
+
+      const newItem = DB.addItem({
+        name,
+        quantity: qtyVal,
+        price: priceVal,
+        remark,
+        categoryId,
+        categoryName,
+        furnitureId,
+        furnitureName,
+        locationName,
+        locationPath: locText,
+        photos,
+      });
+
+      // 切换到该物品的场所，返回首页
+      DB.setCurrentPlace(place.id);
+      location.href = 'mp-home.html';
+    });
+  </script>
+</body>
+</html>

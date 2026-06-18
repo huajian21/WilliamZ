@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 首页</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .place-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 2px; border-bottom: 1px solid transparent; transition: border-color 0.2s ease; text-decoration: none; }
+  .place-switch:hover { border-bottom-color: var(--sumi); }
+  .place-switch .pmark { font-size: 11px; color: var(--sumi-3); letter-spacing: 2px; }
+  .place-switch .pname { font-size: 16px; font-weight: 600; color: var(--sumi); }
+  .place-switch .arrow { font-size: 10px; color: var(--sumi-3); }
+  .avatar { width: 34px; height: 34px; border-radius: var(--r-md); background: var(--washi-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--sumi-2); font-weight: 600; overflow: hidden; }
+
+  .heading { padding: 4px 24px 22px; }
+  .home-search { margin: 0 24px 24px; }
+  .home-search .snum { font-size: 11px; color: var(--sumi-2); }
+
+  .stats { margin: 0 24px 28px; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; justify-content: space-around; align-items: center; }
+  .stat { text-align: center; }
+  .stat .num { font-family: var(--font-serif); font-size: 30px; font-weight: 700; color: var(--sumi); line-height: 1; }
+  .stat .label { font-size: 11px; color: var(--sumi-2); margin-top: 6px; letter-spacing: 1px; }
+  .stat-sep { width: 1px; height: 32px; background: var(--line); }
+
+  /* 卡片网格模块（01 物品分类 / 02 我的房间，同房间页网格） */
+  .h-section { margin: 0 24px 28px; }
+  .h-section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .h-section-head .htitle {
+    font-family: var(--font-serif); font-size: 15px; font-weight: 700;
+    color: var(--sumi); letter-spacing: 2px;
+  }
+  .h-section-head .htitle .sno { color: var(--bengara); margin-right: 8px; }
+  .h-section-head .hmore { font-size: 11px; color: var(--sumi-2); text-decoration: none; border-bottom: 1px solid var(--line-2); padding-bottom: 1px; }
+
+  /* 场所 Tab（02 我的房间，三等分） */
+  .place-mini-tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--line);
+    margin-bottom: 14px;
+  }
+  .place-mini-tab {
+    flex: 1; padding: 10px 0; cursor: pointer; text-align: center;
+    font-size: 14px; color: var(--sumi-3);
+    font-weight: 600; position: relative;
+    background: transparent; border: none; font-family: var(--font-sans);
+    text-decoration: none;
+  }
+  .place-mini-tab .pticon { margin-right: 5px; font-size: 13px; }
+  .place-mini-tab.active { color: var(--sumi); font-weight: 700; }
+  .place-mini-tab.active::after {
+    content: ''; position: absolute; bottom: -1px; left: 30%; right: 30%;
+    height: 2px; background: var(--indigo);
+  }
+
+  .h-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  }
+  .h-card {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 12px 6px; text-align: center;
+    cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+  }
+  .h-card:hover { border-color: var(--sumi); transform: translateY(-2px); }
+  .h-card .hemoji { font-size: 26px; }
+  .h-card .hname {
+    font-size: 12px; color: var(--sumi); font-weight: 500; margin-top: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .h-card .hnum {
+    font-family: var(--font-serif); font-size: 13px; color: var(--indigo);
+    font-weight: 700; margin-top: 2px;
+  }
+</style>
+<script src="../assets/store.js"></script>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="scroll">
+      <div class="topbar">
+        <a class="place-switch" href="mp-place.html">
+          <div>
+            <div class="pmark">PLACE</div>
+            <div style="display:flex;align-items:center;gap:6px;"><span class="pname" id="topPlaceName">我们家</span><span class="arrow">▾</span></div>
+          </div>
+        </a>
+        <div class="avatar"><img id="topAvatar" src="../assets/hjlogo.jpg" style="width:100%;height:100%;border-radius:var(--r-md);object-fit:cover;"></div>
+      </div>
+
+      <div class="heading">
+        <h1 class="heading-h1">知物之所,<span class="accent">归于有序</span></h1>
+      </div>
+
+      <a class="search-box home-search" href="mp-search-result.html">
+        <span class="sico">⌕</span>
+        <span class="sph">检索物品 · 名称或分类</span>
+        <span class="snum" id="searchNum">0</span>
+      </a>
+
+      <div class="stats">
+        <div class="stat"><div class="num" id="statItems">0</div><div class="label">物品</div></div>
+        <div class="stat-sep"></div>
+        <div class="stat"><div class="num" id="statCats">0</div><div class="label">种类</div></div>
+        <div class="stat-sep"></div>
+        <div class="stat"><div class="num" id="statFurns">0</div><div class="label">家具</div></div>
+      </div>
+
+      <!-- 01 最近新增 -->
+      <div class="h-section">
+        <div class="h-section-head">
+          <div class="htitle"><span class="sno">01</span>最近新增</div>
+          <a class="hmore" href="mp-browse.html">全部 ›</a>
+        </div>
+        <div id="recentList" style="padding:0 7px;"></div>
+      </div>
+
+      <div style="height: 20px;"></div>
+    </div>
+
+    <a class="fab" href="mp-item-add.html">+</a>
+
+    <div class="tabs">
+      <a class="tab active" href="mp-home.html"><span class="tkanji">首页</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-browse.html"><span class="tkanji">物品</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-place.html"><span class="tkanji">房间</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-profile.html"><span class="tkanji">我的</span><span class="tdot"></span></a>
+    </div>
+  </div>
+
+  <script>
+    DB.init();
+
+    // 渲染最近新增（5条）
+    function renderRecent() {
+      const cur = DB.getCurrentPlace();
+      const items = DB.getItems(cur.id).slice(0, 5);
+      const list = document.getElementById('recentList');
+      if (items.length === 0) {
+        list.innerHTML = '<div style="padding:30px 0;text-align:center;font-size:12px;color:var(--sumi-3);">还没有物品,点 + 添加第一件吧</div>';
+        return;
+      }
+      list.innerHTML = items.map(i => `
+        <a class="item-row" href="mp-item-detail.html?id=${i.id}">
+          <img src="${i.photos[0] || 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=200'}" onerror="this.src='https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=200'" alt="${i.name}">
+          <div class="info"><div><span class="iname">${i.name}</span></div></div>
+          <div class="iqty">${i.locationPath || '未定位'}</div>
+        </a>
+      `).join('');
+    }
+
+    // 渲染 dashboard
+    function renderStats() {
+      const cur = DB.getCurrentPlace();
+      document.getElementById('topPlaceName').textContent = cur.name;
+      document.getElementById('topAvatar').src = (DB.getUser().avatarUrl) || '../assets/hjlogo.jpg';
+      const stats = DB.getStats(cur.id);
+      document.getElementById('statItems').textContent = stats.itemCount;
+      document.getElementById('statCats').textContent = stats.subcatCount;
+      document.getElementById('statFurns').textContent = stats.furnCount;
+      document.getElementById('searchNum').textContent = stats.itemCount;
+    }
+
+    // 初始渲染
+    renderRecent();
+    renderStats();
+  </script>
+</body>
+</html>

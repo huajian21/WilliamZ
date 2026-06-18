@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 物品</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  /* 顶部搜索栏（首页样式） */
+  .home-search { margin: 0 24px 24px; }
+  .home-search .snum { font-size: 11px; color: var(--sumi-2); }
+
+  /* 分类卡片网格（数字在下） */
+  .cat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin: 0 24px 24px;
+  }
+  .cat-card {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 12px 6px; text-align: center;
+    cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+  }
+  .cat-card:hover { border-color: var(--sumi); transform: translateY(-2px); }
+  .cat-card.active { border-color: var(--indigo); background: var(--washi-2); }
+  .cat-card .cemoji { font-size: 26px; }
+  .cat-card .cname {
+    font-size: 12px; color: var(--sumi); font-weight: 500;
+    margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cat-card .cnum {
+    font-family: var(--font-serif); font-size: 13px; color: var(--indigo);
+    font-weight: 700; margin-top: 2px;
+  }
+
+  /* “其他”折叠卡片 */
+  .cat-other {
+    grid-column: span 1;
+    background: var(--washi-2); border: 1px dashed var(--line-2);
+    border-radius: var(--r-lg); padding: 12px 6px; text-align: center;
+    cursor: pointer; transition: all 0.2s ease; position: relative;
+  }
+  .cat-other:hover { border-color: var(--indigo); }
+  .cat-other .cemoji { font-size: 26px; }
+  .cat-other .cname { font-size: 12px; color: var(--sumi-2); font-weight: 500; margin-top: 6px; }
+  .cat-other .cnum { font-family: var(--font-serif); font-size: 13px; color: var(--kincha); font-weight: 700; margin-top: 2px; }
+
+  /* “其他”展开的下拉栏 */
+  .other-panel {
+    margin: 0 24px 0; max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease;
+    border: 1px solid transparent; border-radius: var(--r-lg);
+    background: transparent;
+  }
+  .other-panel.open { max-height: 400px; margin-bottom: 20px; border-color: var(--line); background: var(--paper); }
+  .other-panel-inner { padding: 8px 16px; }
+  .other-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--line);
+    cursor: pointer; text-decoration: none; transition: padding 0.2s ease;
+  }
+  .other-row:last-child { border-bottom: none; }
+  .other-row:hover { padding-left: 4px; }
+  .other-row:hover .oname { color: var(--indigo); }
+  .other-row .odot { width: 5px; height: 5px; border-radius: 50%; background: var(--line-2); }
+  .other-row .oemoji { font-size: 16px; }
+  .other-row .oname { flex: 1; font-size: 13px; color: var(--sumi-2); transition: color 0.2s ease; }
+  .other-row .onum { font-family: var(--font-serif); font-size: 12px; color: var(--kincha); }
+
+  /* 子分类面板（点击顶层分类展开） */
+  .subcat-panel {
+    margin: 0 24px 0; max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease;
+    border: 1px solid transparent; border-radius: var(--r-lg);
+    background: transparent;
+  }
+  .subcat-panel.open { max-height: 300px; margin-bottom: 20px; border-color: var(--indigo); background: var(--washi-2); }
+  .subcat-head {
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    font-family: var(--font-serif); font-size: 13px; color: var(--sumi);
+    font-weight: 700; letter-spacing: 1px;
+  }
+  .subcat-head .sctag { color: var(--bengara); margin-right: 6px; }
+  .subcat-inner { padding: 4px 16px 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .subcat-chip {
+    padding: 7px 14px; background: var(--paper); border: 1px solid var(--line-2);
+    border-radius: 999px; font-size: 12px; color: var(--sumi-2);
+    cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .subcat-chip:hover { border-color: var(--indigo); color: var(--indigo); }
+  .subcat-chip.active { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+  .subcat-chip .sccount { font-family: var(--font-serif); font-size: 10px; opacity: 0.7; }
+
+  /* 排序条 */
+  .sort-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 0 24px 4px; padding: 10px 0;
+    font-size: 11px; color: var(--sumi-3);
+    border-top: 1px solid var(--line);
+  }
+  .sort-bar .sort-btn { color: var(--sumi-2); cursor: pointer; }
+  .sort-bar .sort-btn strong { color: var(--sumi); font-family: var(--font-serif); }
+
+  /* 物品列表标题（同全部家具标题：编号+标题+共N件 / 排序▾） */
+  .list-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 28px 24px 0; padding-bottom: 10px;
+  }
+  .list-head .lh-left { display: flex; align-items: baseline; gap: 10px; }
+  .list-head .lhtitle {
+    font-family: var(--font-serif); font-size: 15px; font-weight: 700;
+    color: var(--sumi); letter-spacing: 2px;
+  }
+  .list-head .lhtitle .sno { color: var(--bengara); margin-right: 8px; }
+  .list-head .lhcount { font-size: 11px; color: var(--sumi-3); }
+  .list-head .lhcount strong { font-family: var(--font-serif); color: var(--indigo); font-weight: 700; }
+  .list-head .sort-btn { font-size: 11px; color: var(--sumi-2); cursor: pointer; }
+  .list-head .sort-btn strong { color: var(--sumi); font-family: var(--font-serif); }
+
+  /* 最近新区块 */
+  .recent-section { margin: 28px 24px 0; }
+  .recent-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line);
+  }
+  .recent-head .rtitle {
+    font-family: var(--font-serif); font-size: 15px; font-weight: 700;
+    color: var(--sumi); letter-spacing: 2px;
+  }
+  .recent-head .rtitle .sno { color: var(--bengara); margin-right: 8px; }
+  .recent-head .rmore { font-size: 11px; color: var(--sumi-2); text-decoration: none; border-bottom: 1px solid var(--line-2); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="scroll">
+      <div class="topbar">
+        <div class="topbar-title">物品</div>
+      </div>
+
+      <!-- 顶部搜索栏（首页样式） -->
+      <a class="search-box home-search" href="mp-search-result.html">
+        <span class="sico">⌕</span>
+        <span class="sph">检索物品 · 名称或分类</span>
+        <span class="snum" id="searchNum">0</span>
+      </a>
+
+      <!-- 分类卡片网格（JS 动态渲染） -->
+      <div class="cat-grid" id="catGrid"></div>
+
+      <!-- 子分类面板（点击顶层分类展开） -->
+      <div class="subcat-panel" id="subcatPanel">
+        <div class="subcat-head"><span class="sctag">/</span><span id="subcatTitle">衣物</span> · 子分类</div>
+        <div class="subcat-inner" id="subcatInner"></div>
+      </div>
+
+      <!-- “其他”展开的下拉栏（JS 动态渲染） -->
+      <div class="other-panel" id="otherPanel">
+        <div class="other-panel-inner" id="otherInner"></div>
+      </div>
+
+      <!-- 物品列表标题（同全部家具） -->
+      <div class="list-head">
+        <div class="lh-left">
+          <div class="lhtitle">
+            <span class="sno">01</span>全部物品
+            <span class="filter-tag" id="itemFilterTag" style="display:none;font-size:11px;color:var(--indigo);font-weight:500;margin-left:8px;font-family:var(--font-sans);letter-spacing:0;">· <span id="itemFilterName"></span><span class="clear-filter" style="color:var(--sumi-3);margin-left:4px;cursor:pointer;text-decoration:underline;" onclick="clearItemFilter()">✕</span></span>
+          </div>
+          <div class="lhcount">共 <strong id="itemCount">4</strong> 件</div>
+        </div>
+        <span class="sort-btn">排序：<strong>最近添加</strong> ▾</span>
+      </div>
+
+      <!-- 物品列表（JS 渲染，受分类筛选） -->
+      <div class="section" style="margin: 0 24px; padding: 0 7px;" id="itemList">
+      </div>
+
+      <!-- 最近新增已移除 -->
+
+      <div style="height: 20px;"></div>
+    </div>
+
+    <!-- 悬浮 FAB -->
+    <a class="fab" href="mp-item-add.html">+</a>
+
+    <div class="tabs">
+      <a class="tab" href="mp-home.html"><span class="tkanji">首页</span><span class="tdot"></span></a>
+      <a class="tab active" href="mp-browse.html"><span class="tkanji">物品</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-place.html"><span class="tkanji">房间</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-profile.html"><span class="tkanji">我的</span><span class="tdot"></span></a>
+    </div>
+  </div>
+
+  <script>
+    DB.init();
+    const curPlace = DB.getCurrentPlace();
+    const allCats = DB.getCategories(curPlace.id);
+    const topCats = DB.getTopCategories(curPlace.id);
+
+    let currentCatId = null;
+    let currentSubId = null;
+
+    // 渲染分类卡片网格
+    function renderCatGrid() {
+      const items = DB.getItems(curPlace.id);
+      const grid = document.querySelector('.cat-grid');
+
+      // 前 7 个正常显示，第 8 个起进"其他"
+      const main = topCats.slice(0, 7);
+      const others = topCats.slice(7);
+
+      const catCount = (c) => items.filter(i => {
+        const cat = allCats.find(x => x.id === i.categoryId);
+        return cat && (cat.id === c.id || cat.parentId === c.id);
+      }).length;
+
+      grid.innerHTML = main.map(c => {
+        const subs = DB.getSubCategories(c.id);
+        return `<div class="cat-card" onclick="${subs.length ? 'toggleSubcat' : 'selectCat'}('${c.id}', this)">
+          <div class="cemoji">${c.icon}</div><div class="cname">${c.name}</div><div class="cnum">${catCount(c)}</div>
+        </div>`;
+      }).join('');
+
+      // "其他"卡片
+      if (others.length > 0) {
+        const otherCount = others.reduce((s, c) => s + catCount(c), 0);
+        grid.innerHTML += `<div class="cat-other" onclick="toggleOther()"><div class="cemoji">⋯</div><div class="cname">其他</div><div class="cnum">${otherCount}</div></div>`;
+      }
+
+      // "其他"面板内容
+      const otherPanel = document.getElementById('otherPanel');
+      const otherInner = otherPanel.querySelector('.other-panel-inner');
+      if (others.length > 0) {
+        otherInner.innerHTML = others.map(c => {
+          const subs = DB.getSubCategories(c.id);
+          return `<a class="other-row" href="mp-search-result.html?catId=${c.id}">
+            <span class="oemoji">${c.icon}</span><span class="oname">${c.name}</span><span class="onum">${catCount(c)} 件</span>
+          </a>`;
+        }).join('');
+      } else {
+        otherInner.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--sumi-3);">无其他分类</div>';
+      }
+    }
+
+    function toggleOther() {
+      const panel = document.getElementById('otherPanel');
+      panel.classList.toggle('open');
+      const card = document.querySelector('.cat-other .cemoji');
+      if (card) card.textContent = panel.classList.contains('open') ? '▴' : '⋯';
+    }
+
+    // 渲染物品列表
+    function renderItems() {
+      const list = document.getElementById('itemList');
+      const countEl = document.getElementById('itemCount');
+      const tag = document.getElementById('itemFilterTag');
+      const tagName = document.getElementById('itemFilterName');
+
+      let items = DB.getItems(curPlace.id);
+      if (currentSubId) {
+        items = items.filter(i => i.categoryId === currentSubId);
+      } else if (currentCatId) {
+        const subIds = DB.getSubCategories(currentCatId).map(s => s.id);
+        items = items.filter(i => i.categoryId === currentCatId || subIds.includes(i.categoryId));
+      }
+      countEl.textContent = items.length;
+
+      // 筛选标签
+      if (currentCatId) {
+        const cat = allCats.find(c => c.id === currentCatId);
+        const sub = currentSubId ? allCats.find(c => c.id === currentSubId) : null;
+        tagName.textContent = sub ? (cat.name + ' / ' + sub.name) : cat.name;
+        tag.style.display = 'inline';
+      } else {
+        tag.style.display = 'none';
+      }
+
+      if (items.length === 0) {
+        list.innerHTML = '<div style="padding:30px 0;text-align:center;font-size:12px;color:var(--sumi-3);">该分类下暂无物品</div>';
+        return;
+      }
+
+      list.innerHTML = items.map(i => `
+        <a class="item-row" href="mp-item-detail.html?id=${i.id}">
+          <img src="${i.photos[0] || 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=200'}" onerror="this.src='https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=200'" alt="${i.name}">
+          <div class="info"><div><span class="iname">${i.name}</span></div></div>
+          <div class="iqty">${i.locationPath || '未定位'}</div>
+        </a>
+      `).join('');
+    }
+
+    // 点击顶层分类
+    function toggleSubcat(catId, card) {
+      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      currentCatId = catId;
+      currentSubId = null;
+      renderItems();
+
+      const panel = document.getElementById('subcatPanel');
+      const inner = document.getElementById('subcatInner');
+      const titleEl = document.getElementById('subcatTitle');
+      const cat = allCats.find(c => c.id === catId);
+      const subs = DB.getSubCategories(catId);
+
+      if (panel.classList.contains('open') && titleEl.textContent === cat.name) {
+        panel.classList.remove('open');
+        return;
+      }
+
+      titleEl.textContent = cat.name;
+      inner.innerHTML = subs.map(s => {
+        const count = DB.getItems(curPlace.id).filter(i => i.categoryId === s.id).length;
+        return `<a class="subcat-chip" data-sub-id="${s.id}">${s.name}<span class="sccount">${count}</span></a>`;
+      }).join('');
+      panel.classList.add('open');
+
+      inner.querySelectorAll('.subcat-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
+          inner.querySelectorAll('.subcat-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          currentSubId = chip.dataset.subId;
+          renderItems();
+        });
+      });
+    }
+
+    // 无子分类的分类
+    function selectCat(catId, card) {
+      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      document.getElementById('subcatPanel').classList.remove('open');
+      currentCatId = catId;
+      currentSubId = null;
+      renderItems();
+    }
+
+    // 清除筛选
+    function clearItemFilter() {
+      currentCatId = null;
+      currentSubId = null;
+      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.subcat-chip').forEach(c => c.classList.remove('active'));
+      document.getElementById('subcatPanel').classList.remove('open');
+      renderItems();
+    }
+
+    // 从 URL 参数定位分类
+    const params = new URLSearchParams(location.search);
+    const urlCatId = params.get('catId');
+    if (urlCatId) {
+      const cat = allCats.find(c => c.id === urlCatId);
+      if (cat) {
+        if (cat.parentId) {
+          currentCatId = cat.parentId;
+          currentSubId = cat.id;
+        } else {
+          currentCatId = cat.id;
+        }
+      }
+    }
+
+    // 初始渲染
+    renderCatGrid();
+    renderItems();
+    document.getElementById('searchNum').textContent = DB.getStats(curPlace.id).itemCount;
+  </script>
+</body>
+</html>

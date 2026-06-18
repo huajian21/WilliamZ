@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 物品详情</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  /* —— 顶部毛玻璃操作栏（叠在图上）—— */
+  .hero-bar {
+    position: absolute; top: 48px; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px;
+  }
+  .hero-btn {
+    width: 44px; height: 44px; border-radius: var(--r-md);
+    background: rgba(252,250,245,0.55); backdrop-filter: blur(10px);
+    border: 1px solid rgba(224,217,203,0.4);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sumi); font-size: 22px; cursor: pointer; text-decoration: none;
+    transition: all 0.2s;
+  }
+  .hero-btn:hover { background: rgba(252,250,245,0.85); }
+  .hero-bar-right { display: flex; gap: 10px; }
+
+  /* —— Hero 画廊 —— */
+  .gallery {
+    position: relative; width: 100%; height: 300px; overflow: hidden;
+  }
+  .gallery-track {
+    display: flex; width: 100%; height: 100%;
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  .gallery-track img {
+    width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;
+    filter: saturate(0.88);
+  }
+  .gallery-dots {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; z-index: 5;
+  }
+  .gallery-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.5); transition: all 0.2s;
+  }
+  .gallery-dot.active { background: #fff; width: 18px; border-radius: 3px; }
+
+  /* —— 信息区 —— */
+  .detail-pad { padding: 20px 24px 0; }
+
+  /* 标题行：名称 + 数量徽章 */
+  .detail-title-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .detail-name {
+    font-family: var(--font-serif); font-size: 26px; font-weight: 700;
+    color: var(--sumi); line-height: 1.3; flex: 1; min-width: 0;
+  }
+  .qty-badge {
+    flex-shrink: 0; padding: 4px 12px; border-radius: 999px;
+    background: var(--washi-2); border: 1px solid var(--line);
+    font-family: var(--font-serif); font-size: 14px; color: var(--indigo); font-weight: 700;
+  }
+  .detail-title-row #detailTag { flex-shrink: 0; }
+
+  /* —— 信息卡片 —— */
+  .info-card {
+    margin-top: 18px; padding: 4px 16px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-lg);
+  }
+  .ic-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 13px 0; border-bottom: 1px solid var(--line);
+  }
+  .ic-row:last-child { border-bottom: none; }
+  .ic-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; flex-shrink: 0; }
+  .ic-value {
+    font-size: 14px; color: var(--sumi); text-align: right;
+    font-family: var(--font-serif); flex: 1; justify-self: end;
+  }
+  .ic-value.muted { color: var(--sumi-3); font-family: var(--font-sans); font-weight: 400; }
+
+  /* 位置行：可点击，带箭头 */
+  .ic-row.clickable { cursor: pointer; transition: background 0.2s; border-radius: var(--r-md); margin: 0 -8px; padding: 13px 8px; }
+  .ic-row.clickable:hover { background: var(--washi-2); }
+  .ic-row.clickable .ic-value { color: var(--indigo); }
+  .ic-row.clickable .ic-arrow { font-size: 12px; color: var(--sumi-3); margin-left: 6px; }
+
+  /* 价格强调行 */
+  .ic-price-row {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    padding: 14px 0; border-bottom: 1px solid var(--line);
+  }
+  .ic-price-row:last-child { border-bottom: none; }
+  .ic-price-label { font-size: 12px; color: var(--sumi-3); letter-spacing: 1px; }
+  .ic-price-val { display: flex; align-items: baseline; gap: 2px; }
+  .ic-price-val .pv-yen { font-family: var(--font-serif); font-size: 14px; color: var(--sumi-2); font-weight: 700; }
+  .ic-price-val .pv-num { font-family: var(--font-serif); font-size: 22px; color: var(--sumi); font-weight: 700; }
+  .ic-price-val .pv-unit { font-size: 11px; color: var(--sumi-3); margin-left: 2px; }
+  .ic-total {
+    font-family: var(--font-serif); font-size: 16px; color: var(--indigo); font-weight: 700;
+  }
+
+  /* —— 底部操作区（贴在内容流末尾，非悬浮）—— */
+  .action-bar {
+    margin: 22px 24px 0;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+    display: flex; gap: 12px;
+  }
+  .action-btn {
+    flex: 1; padding: 15px; border-radius: var(--r-md);
+    font-size: 14px; font-weight: 600; letter-spacing: 1px; text-align: center;
+    cursor: pointer; border: none; font-family: var(--font-sans); text-decoration: none;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .ab-transfer { background: var(--sumi); color: var(--paper); }
+  .ab-transfer:hover { background: var(--indigo-deep); }
+  .ab-delete { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .ab-delete:hover { background: var(--danger); color: var(--paper); }
+
+  /* —— 转移悬浮面板（复用添加页结构）—— */
+  .sheet-mask {
+    position: fixed; inset: 0; background: rgba(42,39,35,0.4); z-index: 80;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    background: var(--paper); border-radius: 16px 16px 0 0;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    max-height: 75vh; display: flex; flex-direction: column;
+    box-shadow: 0 -8px 30px rgba(42,39,35,0.15);
+  }
+  .sheet.open { transform: translateY(0); }
+  @media (min-width: 481px) { .sheet { left: 50%; transform: translate(-50%,100%); width: 390px; } .sheet.open { transform: translate(-50%,0); } }
+  .sheet-handle { width: 36px; height: 4px; background: var(--line-2); border-radius: 2px; margin: 10px auto 6px; }
+  .sheet-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 20px 12px; border-bottom: 1px solid var(--line);
+  }
+  .sheet-head .sh-title { font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--sumi); letter-spacing: 2px; }
+  .sheet-head .sh-close { width: 28px; height: 28px; border-radius: 50%; background: var(--washi-2); display: flex; align-items: center; justify-content: center; color: var(--sumi-2); cursor: pointer; font-size: 14px; border: none; }
+  .sheet-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .sheet-body::-webkit-scrollbar { width: 0; }
+  .sheet-foot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .sheet-foot .btn-confirm { flex: 1; background: var(--sumi); color: var(--paper); padding: 13px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; letter-spacing: 2px; text-align: center; cursor: pointer; border: none; }
+  .sheet-foot .btn-confirm:hover { background: var(--indigo-deep); }
+
+  .sheet-level { margin-bottom: 18px; }
+  .sheet-level .sl-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 8px; }
+  .sheet-level .sl-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .sheet-level .sl-scroll::-webkit-scrollbar { display: none; }
+  .sl-card {
+    flex-shrink: 0; width: 72px; padding: 10px 4px; text-align: center;
+    background: var(--washi); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .sl-card:hover { border-color: var(--sumi); }
+  .sl-card.selected { border-color: var(--indigo); background: var(--paper); }
+  .sl-card .slc-emoji { font-size: 24px; }
+  .sl-card .slc-name { font-size: 11px; color: var(--sumi); margin-top: 4px; }
+  .sl-card.selected .slc-name { color: var(--indigo); font-weight: 600; }
+  .place-pick { display: flex; gap: 6px; }
+  .place-pick-item {
+    flex: 1; padding: 10px 4px; text-align: center; font-size: 12px;
+    background: var(--washi); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    cursor: pointer; color: var(--sumi-2);
+  }
+  .place-pick-item.selected { border-color: var(--indigo); color: var(--indigo); background: var(--paper); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <!-- 顶部毛玻璃操作栏：返回 + 编辑（放大、半透明） -->
+    <div class="hero-bar">
+      <a class="hero-btn" href="mp-home.html">‹</a>
+      <a class="hero-btn" id="heroEdit" title="编辑">✎</a>
+    </div>
+
+    <div class="scroll">
+      <!-- 画廊 -->
+      <div class="gallery">
+        <div class="gallery-track" id="galleryTrack">
+          <img src="https://images.unsplash.com/photo-1626965556114-27c91c051269?w=600&q=75&auto=format&fit=crop" alt="灰色卫衣">
+          <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=75&auto=format&fit=crop" onerror="this.style.display='none'" alt="灰色卫衣2">
+        </div>
+        <div class="gallery-dots" id="galleryDots">
+          <div class="gallery-dot active"></div>
+          <div class="gallery-dot"></div>
+        </div>
+      </div>
+
+      <div class="detail-pad">
+        <!-- 标题行：名称 + 分类 + 数量 -->
+        <div class="detail-title-row">
+          <div class="detail-name">灰色卫衣</div>
+          <span class="tag" id="detailTag">衣物 / 上衣</span>
+          <div class="qty-badge">× 2 件</div>
+        </div>
+
+        <!-- 位置卡片 -->
+        <div class="info-card">
+          <div class="ic-row clickable" onclick="location.href='mp-search-result.html'">
+            <span class="ic-label">存放位置</span>
+            <span class="ic-value"><span class="pi pi-home" style="width:14px;height:14px;vertical-align:-2px;"></span>我们家 / 主卧 / 衣柜 / 中层 <span class="ic-arrow">›</span></span>
+          </div>
+        </div>
+
+        <!-- 价格卡片 -->
+        <div class="info-card">
+          <div class="ic-price-row">
+            <span class="ic-price-label">单价</span>
+            <span class="ic-price-val">
+              <span class="pv-yen">¥</span><span class="pv-num">128</span><span class="pv-unit">/件</span>
+            </span>
+          </div>
+          <div class="ic-price-row">
+            <span class="ic-price-label">合计</span>
+            <span class="ic-total">¥256</span>
+          </div>
+        </div>
+
+        <!-- 其他信息卡片 -->
+        <div class="info-card">
+          <div class="ic-row">
+            <span class="ic-label">备注</span>
+            <span class="ic-value muted">去年买的,有点起球</span>
+          </div>
+          <div class="ic-row">
+            <span class="ic-label">添加人</span>
+            <span class="ic-value">花间</span>
+          </div>
+          <div class="ic-row">
+            <span class="ic-label">添加时间</span>
+            <span class="ic-value">2026-06-15</span>
+          </div>
+        </div>
+
+        <!-- 底部操作区（非悬浮，贴在内容末尾） -->
+        <div class="action-bar">
+          <button class="action-btn ab-transfer" onclick="openSheet()">转移到</button>
+          <button class="action-btn ab-delete" id="btnDelete">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 转移悬浮面板 -->
+  <div class="sheet-mask" id="transferMask" onclick="closeSheet()"></div>
+  <div class="sheet" id="transferSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sh-title">转移到</div>
+      <button class="sh-close" onclick="closeSheet()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <!-- 目标场所（JS 渲染） -->
+      <div class="sheet-level">
+        <div class="sl-label">目标场所</div>
+        <div class="place-pick" id="tfPlacePick"></div>
+      </div>
+      <!-- 房间（随场所联动） -->
+      <div class="sheet-level">
+        <div class="sl-label">房间</div>
+        <div class="sl-scroll" id="tfRoomScroll"></div>
+      </div>
+      <!-- 家具（随房间联动） -->
+      <div class="sheet-level">
+        <div class="sl-label">家具</div>
+        <div class="sl-scroll" id="tfFurnScroll"></div>
+      </div>
+      <!-- 层位（通用） -->
+      <div class="sheet-level">
+        <div class="sl-label">层位</div>
+        <div class="sl-scroll" id="tfLocScroll"></div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-confirm" onclick="confirmTransfer()">确认转移</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== 从 DB 加载物品数据 =====
+    DB.init();
+    const params = new URLSearchParams(location.search);
+    const itemId = params.get('id');
+    const item = itemId ? DB.getItem(itemId) : null;
+
+    if (item) {
+      // 名称
+      document.querySelector('.detail-name').textContent = item.name;
+      // 数量
+      document.querySelector('.qty-badge').textContent = '× ' + item.quantity + ' 件';
+      // 分类
+      document.getElementById('detailTag').textContent = item.categoryName || '未分类';
+      // 位置
+      const place = DB.getPlace(item.placeId);
+      const placeIcon = place ? '<span class="pi ' + place.iconClass + '" style="width:14px;height:14px;vertical-align:-2px;"></span>' : '';
+      document.querySelector('.ic-row.clickable .ic-value').innerHTML = placeIcon + (place ? place.name : '') + ' / ' + (item.locationPath || '未定位') + ' <span class="ic-arrow">›</span>';
+      // 价格
+      const priceVal = document.querySelector('.ic-price-val');
+      if (priceVal) {
+        priceVal.querySelector('.pv-num').textContent = item.price || 0;
+      }
+      const icTotal = document.querySelector('.ic-total');
+      if (icTotal) icTotal.textContent = '¥' + ((item.price || 0) * (item.quantity || 1));
+      // 备注/添加人/时间
+      const rows = document.querySelectorAll('.info-card:last-of-type .ic-row');
+      if (rows[0]) rows[0].querySelector('.ic-value').textContent = item.remark || '无';
+      if (rows[1]) rows[1].querySelector('.ic-value').textContent = item.createdByName || '';
+      if (rows[2]) {
+        const d = new Date(item.createdAt);
+        rows[2].querySelector('.ic-value').textContent = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      }
+      // 画廊
+      if (item.photos && item.photos.length > 0) {
+        const track = document.getElementById('galleryTrack');
+        track.innerHTML = item.photos.map(p => '<img src="' + p + '?w=600&q=75&auto=format&fit=crop" onerror="this.src=\'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=600\'" alt="' + item.name + '">').join('');
+        const dots = document.getElementById('galleryDots');
+        dots.innerHTML = item.photos.map((_, i) => '<div class="gallery-dot ' + (i === 0 ? 'active' : '') + '"></div>').join('');
+      }
+      // 顶部编辑按钮
+      const heroEdit = document.getElementById('heroEdit');
+      if (heroEdit) heroEdit.href = 'mp-item-edit.html?id=' + item.id;
+      // 底部删除按钮
+      const btnDelete = document.getElementById('btnDelete');
+      if (btnDelete) btnDelete.addEventListener('click', () => {
+        if (confirm('确认删除该物品?')) { DB.deleteItem(item.id); location.href = 'mp-home.html'; }
+      });
+      // 转移面板：目标场所（排除当前场所）
+      const tfPlaces = DB.getPlaces().filter(p => p.id !== item.placeId);
+      const tfPlacePick = document.getElementById('tfPlacePick');
+      const tfRoomScroll = document.getElementById('tfRoomScroll');
+      const tfFurnScroll = document.getElementById('tfFurnScroll');
+      const tfLocScroll = document.getElementById('tfLocScroll');
+      // 层位（通用，固定选项）
+      const LOC_LEVELS = [
+        { emoji: '▴', name: '上层' },
+        { emoji: '▾', name: '中层' },
+        { emoji: '▾', name: '下层' },
+      ];
+      let tfSelected = { placeId: tfPlaces[0] && tfPlaces[0].id, roomId: null, furnitureId: null };
+
+      function renderTfPlaces() {
+        tfPlacePick.innerHTML = tfPlaces.map((p, i) =>
+          '<div class="place-pick-item ' + (p.id === tfSelected.placeId ? 'selected' : '') + '" onclick="pickTfPlace(\'' + p.id + '\')" data-place-id="' + p.id + '"><span class="pi ' + p.iconClass + '" style="width:16px;height:16px;vertical-align:-3px;"></span> ' + p.name + '</div>'
+        ).join('');
+      }
+      function renderTfRooms() {
+        const rooms = DB.getRooms(tfSelected.placeId);
+        tfSelected.roomId = rooms[0] ? rooms[0].id : null;
+        tfRoomScroll.innerHTML = rooms.length ? rooms.map((r, i) =>
+          '<div class="sl-card ' + (i === 0 ? 'selected' : '') + '" onclick="pickTfRoom(\'' + r.id + '\')" data-room-id="' + r.id + '"><div class="slc-emoji">' + (r.emoji || '🚪') + '</div><div class="slc-name">' + r.name + '</div></div>'
+        ).join('') : '<div style="font-size:12px;color:var(--sumi-3);padding:10px 0;">该场所暂无房间</div>';
+        renderTfFurns();
+      }
+      function renderTfFurns() {
+        const furns = tfSelected.roomId ? DB.getFurnituresByRoom(tfSelected.roomId) : [];
+        tfSelected.furnitureId = furns[0] ? furns[0].id : null;
+        tfFurnScroll.innerHTML = furns.length ? furns.map((f, i) =>
+          '<div class="sl-card ' + (i === 0 ? 'selected' : '') + '" onclick="pickTfFurn(\'' + f.id + '\')" data-furn-id="' + f.id + '"><div class="slc-emoji">🗄</div><div class="slc-name">' + f.name + '</div></div>'
+        ).join('') : '<div style="font-size:12px;color:var(--sumi-3);padding:10px 0;">该房间暂无家具</div>';
+      }
+      function renderTfLocs() {
+        tfLocScroll.innerHTML = LOC_LEVELS.map((l, i) =>
+          '<div class="sl-card ' + (i === 0 ? 'selected' : '') + '" onclick="pickTfLevel(this)"><div class="slc-emoji">' + l.emoji + '</div><div class="slc-name">' + l.name + '</div></div>'
+        ).join('');
+      }
+      window.pickTfPlace = (pid) => { tfSelected.placeId = pid; renderTfPlaces(); renderTfRooms(); };
+      window.pickTfRoom = (rid) => {
+        tfSelected.roomId = rid;
+        tfRoomScroll.querySelectorAll('.sl-card').forEach(c => c.classList.toggle('selected', c.dataset.roomId === rid));
+        renderTfFurns();
+      };
+      window.pickTfFurn = (fid) => {
+        tfSelected.furnitureId = fid;
+        tfFurnScroll.querySelectorAll('.sl-card').forEach(c => c.classList.toggle('selected', c.dataset.furnId === fid));
+      };
+      window.pickTfLevel = (el) => {
+        el.parentElement.querySelectorAll('.sl-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+      };
+      // 初始化面板内容
+      renderTfPlaces(); renderTfRooms(); renderTfLocs();
+    } else {
+      // 无物品（id 缺失或已删除）→ 显示空态
+      document.querySelector('.scroll').innerHTML =
+        '<div class="empty-state" style="padding-top:120px;">' +
+        '<div class="emoji">📭</div><div class="title">物品不存在</div>' +
+        '<div class="desc">它可能已被删除</div>' +
+        '<a href="mp-home.html" style="display:inline-block;margin-top:20px;padding:10px 24px;background:var(--sumi);color:var(--paper);border-radius:var(--r-md);font-size:13px;text-decoration:none;letter-spacing:2px;">返回首页</a>' +
+        '</div>';
+    }
+
+    // 画廊切换
+    let gIndex = 0;
+    const gTrack = document.getElementById('galleryTrack');
+    const gImgs = gTrack.children.length;
+    document.querySelector('.gallery').addEventListener('click', () => {
+      gIndex = (gIndex + 1) % gImgs;
+      gTrack.style.transform = `translateX(-${gIndex * 100}%)`;
+      document.querySelectorAll('.gallery-dot').forEach((d, i) => d.classList.toggle('active', i === gIndex));
+    });
+
+    // 转移面板
+    function openSheet() {
+      document.getElementById('transferMask').classList.add('open');
+      document.getElementById('transferSheet').classList.add('open');
+    }
+    function closeSheet() {
+      document.getElementById('transferMask').classList.remove('open');
+      document.getElementById('transferSheet').classList.remove('open');
+    }
+    function confirmTransfer() {
+      if (!item) return;
+      if (!tfSelected.placeId) { alert('请选择目标场所'); return; }
+
+      // 读选中的房间/家具/层位名称
+      const selRoom = tfRoomScroll.querySelector('.sl-card.selected .slc-name');
+      const selFurn = tfFurnScroll.querySelector('.sl-card.selected .slc-name');
+      const selLoc = tfLocScroll.querySelector('.sl-card.selected .slc-name');
+      const roomName = selRoom ? selRoom.textContent : '';
+      const furnName = selFurn ? selFurn.textContent : '';
+      const locName = selLoc ? selLoc.textContent : '';
+      const newPath = [roomName, furnName, locName].filter(Boolean).join('/');
+      const targetPlace = DB.getPlace(tfSelected.placeId);
+
+      if (confirm('确认转移到: ' + targetPlace.name + (newPath ? ' / ' + newPath : '') + ' ?')) {
+        DB.updateItem(item.id, {
+          placeId: tfSelected.placeId,
+          furnitureId: tfSelected.furnitureId || null,
+          furnitureName: furnName,
+          locationName: locName,
+          locationPath: newPath,
+        });
+        closeSheet();
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>

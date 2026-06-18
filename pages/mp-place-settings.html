@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 场所设置</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .topbar .back-btn { justify-self: start; }
+  .topbar .topbar-title { justify-self: center; }
+
+  .settings-pad { padding: 8px 24px calc(40px + env(safe-area-inset-bottom)); }
+
+  /* 场所信息头 */
+  .place-info-head {
+    padding: 20px; display: flex; align-items: center; gap: 16px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-lg);
+    margin-bottom: 20px;
+  }
+  .place-info-head .pih-icon {
+    width: 56px; height: 56px; border-radius: var(--r-md); flex-shrink: 0;
+    background: var(--washi-2); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .place-info-head .pih-icon .pi { width: 32px; height: 32px; }
+  .place-info-head .pih-name { font-family: var(--font-serif); font-size: 20px; font-weight: 700; color: var(--sumi); }
+  .place-info-head .pih-meta { font-size: 11px; color: var(--sumi-3); margin-top: 4px; }
+
+  /* 设置卡片 */
+  .setting-card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-lg);
+    margin-bottom: 14px; overflow: hidden;
+  }
+  .sc-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 15px 16px; border-bottom: 1px solid var(--line);
+    cursor: pointer; transition: background 0.2s;
+  }
+  .sc-row:last-child { border-bottom: none; }
+  .sc-row:hover { background: var(--washi-2); }
+  .sc-row .sc-label { flex: 1; font-size: 14px; color: var(--sumi); }
+  .sc-row .sc-value { font-size: 13px; color: var(--sumi-3); font-family: var(--font-serif); }
+  .sc-row .sc-arrow { font-size: 12px; color: var(--sumi-3); }
+
+  /* 危险区 */
+  .danger-card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-lg);
+    margin-top: 20px; overflow: hidden;
+  }
+  .danger-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 15px 16px; cursor: pointer; transition: background 0.2s;
+  }
+  .danger-row:hover { background: var(--washi-2); }
+  .danger-row .dr-label { flex: 1; font-size: 14px; color: var(--danger); }
+
+  .block-head {
+    font-family: var(--font-serif); font-size: 12px; color: var(--sumi-2);
+    font-weight: 700; letter-spacing: 2px; margin: 20px 0 10px;
+  }
+
+  /* —— 编辑面板 —— */
+  .sheet-mask { position: fixed; inset: 0; background: rgba(42,39,35,0.4); z-index: 80; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: var(--paper);
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); max-height: 80vh;
+    display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(42,39,35,0.15);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sheet.open { transform: translateY(0); }
+  @media (min-width: 481px) { .sheet { left: 50%; transform: translate(-50%, 100%); width: 390px; } .sheet.open { transform: translate(-50%, 0); } }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 20px 12px; border-bottom: 1px solid var(--line); }
+  .sheet-title { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--sumi); }
+  .sheet-close { font-size: 22px; color: var(--sumi-3); cursor: pointer; line-height: 1; padding: 4px; }
+  .sheet-body { padding: 16px 20px; }
+  .sf-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 6px; }
+  .sf-input {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--line-2);
+    border-radius: var(--r-md); font-size: 14px; font-family: var(--font-sans);
+    color: var(--sumi); background: var(--washi); outline: none; transition: border-color 0.2s;
+  }
+  .sf-input:focus { border-color: var(--indigo); }
+  .sf-row { margin-bottom: 16px; }
+  .type-pick, .icon-pick { display: flex; gap: 10px; }
+  .type-pick .tp, .icon-pick .ip {
+    flex: 1; padding: 14px 8px; text-align: center; border: 1px solid var(--line-2);
+    border-radius: var(--r-md); cursor: pointer; background: var(--washi); transition: all 0.2s;
+  }
+  .type-pick .tp .pi, .icon-pick .ip .pi { width: 24px; height: 24px; }
+  .type-pick .tp .tname, .icon-pick .ip .iname { font-size: 11px; color: var(--sumi-2); margin-top: 6px; display: block; }
+  .type-pick .tp.active, .icon-pick .ip.active { border-color: var(--indigo); background: var(--paper); box-shadow: 0 0 0 2px rgba(52,92,92,0.15); }
+  .sheet-foot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .sheet-foot .btn-cancel { flex: 0 0 90px; background: transparent; color: var(--sumi-2); border: 1px solid var(--line-2); padding: 13px; border-radius: var(--r-md); font-size: 14px; cursor: pointer; font-family: var(--font-sans); }
+  .sheet-foot .btn-confirm { flex: 1; background: var(--sumi); color: var(--paper); padding: 13px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; letter-spacing: 2px; text-align: center; cursor: pointer; border: none; font-family: var(--font-sans); }
+</style>
+<script src="../assets/store.js"></script>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-profile.html">‹</a>
+      <div class="topbar-title">场所设置</div>
+      <span style="width: 28px;"></span>
+    </div>
+
+    <div class="scroll">
+      <div class="settings-pad" id="pad"></div>
+    </div>
+  </div>
+
+  <!-- 编辑面板 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title" id="sheetTitle">编辑</div>
+      <span class="sheet-close" id="sheetClose">×</span>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+    <div class="sheet-foot">
+      <button class="btn-cancel" id="btnCancel">取消</button>
+      <button class="btn-confirm" id="btnConfirm">保存</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const pad = document.getElementById('pad');
+  const TYPE_LABELS = { home: '家', rv: '房车', studio: '工作室', other: '其他' };
+  const ICON_OPTIONS = [
+    { class: 'pi-home', label: '家' },
+    { class: 'pi-rv', label: '房车' },
+    { class: 'pi-studio', label: '工作室' },
+  ];
+  let place = DB.getCurrentPlace();
+  let editMode = null;     // 'name' | 'type' | 'icon'
+  let editValue = null;    // 当前编辑值
+
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function render() {
+    place = DB.getCurrentPlace();
+    const stats = DB.getStats(place.id);
+    const members = DB.getMembers().filter(m => m.accessiblePlaceIds.length === 0 || m.accessiblePlaceIds.includes(place.id));
+
+    pad.innerHTML = `
+      <div class="place-info-head">
+        <div class="pih-icon"><span class="pi ${escapeHtml(place.iconClass || 'pi-home')}"></span></div>
+        <div>
+          <div class="pih-name">${escapeHtml(place.name)}</div>
+          <div class="pih-meta">${escapeHtml(TYPE_LABELS[place.type] || place.type)} · ${stats.itemCount} 件物品 · ${members.length} 位成员 · 创建于 ${fmtDate(place.createdAt)}</div>
+        </div>
+      </div>
+
+      <div class="block-head">基本设置</div>
+      <div class="setting-card">
+        <div class="sc-row" data-edit="name">
+          <span class="sc-label">场所名称</span>
+          <span class="sc-value">${escapeHtml(place.name)}</span>
+          <span class="sc-arrow">›</span>
+        </div>
+        <div class="sc-row" data-edit="type">
+          <span class="sc-label">场所类型</span>
+          <span class="sc-value">${escapeHtml(TYPE_LABELS[place.type] || place.type)}</span>
+          <span class="sc-arrow">›</span>
+        </div>
+        <div class="sc-row" data-edit="icon">
+          <span class="sc-label">场所图标</span>
+          <span class="pi ${escapeHtml(place.iconClass || 'pi-home')}" style="width:20px;height:20px;"></span>
+          <span class="sc-arrow">›</span>
+        </div>
+      </div>
+
+      <div class="block-head">数据管理</div>
+      <div class="setting-card">
+        <div class="sc-row" onclick="location.href='mp-room-manage.html'">
+          <span class="sc-label">房间与家具</span>
+          <span class="sc-value">${stats.roomCount} 房间 / ${stats.furnCount} 家具</span>
+          <span class="sc-arrow">›</span>
+        </div>
+        <div class="sc-row" onclick="location.href='mp-category-manage.html'">
+          <span class="sc-label">分类管理</span>
+          <span class="sc-value">${stats.subcatCount} 种类</span>
+          <span class="sc-arrow">›</span>
+        </div>
+        <div class="sc-row" id="exportBtn">
+          <span class="sc-label">导出数据</span>
+          <span class="sc-value">JSON</span>
+          <span class="sc-arrow">›</span>
+        </div>
+      </div>
+
+      <div class="block-head">统计</div>
+      <div class="setting-card">
+        <div class="sc-row" onclick="location.href='mp-stats.html'">
+          <span class="sc-label">统计概览</span>
+          <span class="sc-value">${stats.itemCount} 件 / ¥${Math.round(stats.totalValue).toLocaleString()}</span>
+          <span class="sc-arrow">›</span>
+        </div>
+      </div>
+
+      <div class="block-head">危险操作</div>
+      <div class="danger-card">
+        <div class="danger-row" id="clearItems">
+          <span class="dr-label">清空所有物品</span>
+          <span class="sc-arrow">›</span>
+        </div>
+        <div class="danger-row" style="border-top:1px solid var(--line);" id="delPlace">
+          <span class="dr-label">删除场所</span>
+          <span class="sc-arrow">›</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // —— 编辑面板 ——
+  const sheetMask = document.getElementById('sheetMask');
+  const sheet = document.getElementById('sheet');
+  const sheetTitle = document.getElementById('sheetTitle');
+  const sheetBody = document.getElementById('sheetBody');
+  const sheetClose = document.getElementById('sheetClose');
+  const btnCancel = document.getElementById('btnCancel');
+  const btnConfirm = document.getElementById('btnConfirm');
+
+  function openSheet(mode) {
+    editMode = mode;
+    if (mode === 'name') {
+      sheetTitle.textContent = '编辑场所名称';
+      editValue = place.name;
+      sheetBody.innerHTML = `
+        <div class="sf-row">
+          <div class="sf-label">名称</div>
+          <input class="sf-input" id="nameInput" value="${escapeHtml(place.name)}" maxlength="16">
+        </div>`;
+      setTimeout(() => document.getElementById('nameInput').focus(), 300);
+    } else if (mode === 'type') {
+      sheetTitle.textContent = '选择场所类型';
+      editValue = place.type;
+      sheetBody.innerHTML = `
+        <div class="sf-row">
+          <div class="sf-label">类型</div>
+          <div class="type-pick" id="typePick">
+            ${Object.entries(TYPE_LABELS).map(([k, v]) =>
+              `<div class="tp ${k === place.type ? 'active' : ''}" data-k="${k}"><span class="tname">${v}</span></div>`
+            ).join('')}
+          </div>
+        </div>`;
+      sheetBody.querySelector('#typePick').addEventListener('click', e => {
+        const t = e.target.closest('.tp'); if (!t) return;
+        sheetBody.querySelectorAll('.tp').forEach(n => n.classList.remove('active'));
+        t.classList.add('active'); editValue = t.dataset.k;
+      });
+    } else if (mode === 'icon') {
+      sheetTitle.textContent = '选择场所图标';
+      editValue = place.iconClass || 'pi-home';
+      sheetBody.innerHTML = `
+        <div class="sf-row">
+          <div class="sf-label">图标</div>
+          <div class="icon-pick" id="iconPick">
+            ${ICON_OPTIONS.map(o =>
+              `<div class="ip ${o.class === editValue ? 'active' : ''}" data-k="${o.class}"><span class="pi ${o.class}"></span><span class="iname">${o.label}</span></div>`
+            ).join('')}
+          </div>
+        </div>`;
+      sheetBody.querySelector('#iconPick').addEventListener('click', e => {
+        const t = e.target.closest('.ip'); if (!t) return;
+        sheetBody.querySelectorAll('.ip').forEach(n => n.classList.remove('active'));
+        t.classList.add('active'); editValue = t.dataset.k;
+      });
+    }
+    sheetMask.classList.add('open');
+    sheet.classList.add('open');
+  }
+  function closeSheet() { sheetMask.classList.remove('open'); sheet.classList.remove('open'); editMode = null; }
+  sheetClose.onclick = btnCancel.onclick = closeSheet;
+  sheetMask.onclick = closeSheet;
+
+  btnConfirm.onclick = () => {
+    if (editMode === 'name') {
+      const v = document.getElementById('nameInput').value.trim();
+      if (!v) return;
+      DB.updatePlace(place.id, { name: v });
+    } else if (editMode === 'type') {
+      DB.updatePlace(place.id, { type: editValue });
+    } else if (editMode === 'icon') {
+      DB.updatePlace(place.id, { iconClass: editValue });
+    }
+    closeSheet(); render();
+  };
+
+  // —— 行点击事件 ——
+  pad.addEventListener('click', e => {
+    const editRow = e.target.closest('[data-edit]');
+    if (editRow) { openSheet(editRow.dataset.edit); return; }
+    if (e.target.closest('#exportBtn')) {
+      const data = DB.exportPlace(place.id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${place.name}-数据.json`; a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    if (e.target.closest('#clearItems')) {
+      if (confirm(`确认清空「${place.name}」的所有物品?此操作不可恢复。`)) {
+        DB.clearPlaceItems(place.id);
+        render();
+      }
+      return;
+    }
+    if (e.target.closest('#delPlace')) {
+      if (confirm(`确认删除场所「${place.name}」?所有物品和位置数据将永久丢失。`)) {
+        if (DB.deletePlace(place.id)) {
+          location.href = 'mp-home.html';
+        } else {
+          alert('至少保留一个场所');
+        }
+      }
+      return;
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

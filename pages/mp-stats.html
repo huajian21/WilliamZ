@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 统计概览</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .topbar .back-btn { justify-self: start; }
+  .topbar .topbar-title { justify-self: center; }
+  .topbar-place {
+    justify-self: end; height: 32px; padding: 0 10px; font-size: 12px;
+    background: var(--paper); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    color: var(--sumi); outline: none; cursor: pointer; appearance: none; padding-right: 22px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 10 6'%3E%3Cpath fill='%23A8A296' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+
+  .stats-pad { padding: 8px 24px calc(40px + env(safe-area-inset-bottom)); }
+
+  /* 概览大数字 */
+  .overview-hero {
+    padding: 24px 0; text-align: center; border-bottom: 1px solid var(--line); margin-bottom: 24px;
+  }
+  .overview-hero .oh-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 2px; }
+  .overview-hero .oh-num {
+    font-family: var(--font-serif); font-size: 48px; font-weight: 700; color: var(--sumi);
+    line-height: 1.1; margin-top: 6px;
+  }
+  .overview-hero .oh-sub { font-size: 12px; color: var(--sumi-3); margin-top: 8px; }
+  .overview-hero .oh-sub strong { color: var(--indigo); font-family: var(--font-serif); }
+
+  /* 区块标题 */
+  .block-head {
+    font-family: var(--font-serif); font-size: 13px; color: var(--sumi); font-weight: 700;
+    letter-spacing: 2px; margin-bottom: 14px;
+  }
+  .block-head .bh-no { color: var(--bengara); margin-right: 8px; }
+
+  /* 数量分布(横向条形) */
+  .dist-row { margin-bottom: 12px; }
+  .dist-row .dr-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--sumi-2); margin-bottom: 4px; }
+  .dist-row .dr-head .dr-name { display: flex; align-items: center; gap: 6px; }
+  .dist-row .dr-head .dr-count { font-family: var(--font-serif); color: var(--indigo); font-weight: 700; }
+  .dist-bar { height: 6px; background: var(--washi-2); border-radius: 3px; overflow: hidden; }
+  .dist-fill { height: 100%; background: var(--indigo); border-radius: 3px; transition: width 0.5s; }
+
+  /* 价值合计卡片 */
+  .value-card {
+    padding: 16px; background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); margin-bottom: 24px;
+  }
+  .value-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 10px 0; border-bottom: 1px solid var(--line);
+  }
+  .value-row:last-child { border-bottom: none; }
+  .value-row .vr-name { font-size: 13px; color: var(--sumi-2); display: flex; align-items: center; gap: 6px; }
+  .value-row .vr-amount { font-family: var(--font-serif); font-size: 16px; color: var(--sumi); font-weight: 700; }
+  .value-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-top: 14px; margin-top: 6px; border-top: 2px solid var(--sumi);
+  }
+  .value-total .vt-label { font-family: var(--font-serif); font-size: 14px; color: var(--sumi); font-weight: 700; }
+  .value-total .vt-amount { font-family: var(--font-serif); font-size: 24px; color: var(--indigo); font-weight: 700; }
+
+  /* 时间线 */
+  .timeline { padding-left: 4px; }
+  .tl-item {
+    display: flex; gap: 14px; padding-bottom: 18px; position: relative;
+  }
+  .tl-item::before {
+    content: ''; position: absolute; left: 7px; top: 18px; bottom: 0; width: 1px; background: var(--line);
+  }
+  .tl-item:last-child::before { display: none; }
+  .tl-dot {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 3px;
+    border: 2px solid var(--indigo); background: var(--paper); position: relative; z-index: 1;
+  }
+  .tl-content { flex: 1; }
+  .tl-action { font-size: 13px; color: var(--sumi); }
+  .tl-action strong { font-family: var(--font-serif); }
+  .tl-meta { font-size: 11px; color: var(--sumi-3); margin-top: 3px; }
+  .tl-time { font-size: 10px; color: var(--sumi-3); margin-top: 2px; }
+
+  .empty-mini { padding: 24px 16px; text-align: center; color: var(--sumi-3); font-size: 13px; }
+</style>
+<script src="../assets/store.js"></script>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-profile.html">‹</a>
+      <div class="topbar-title">统计概览</div>
+      <select class="topbar-place" id="placeSelect"></select>
+    </div>
+
+    <div class="scroll">
+      <div class="stats-pad" id="statsPad"></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const pad = document.getElementById('statsPad');
+  const placeSelect = document.getElementById('placeSelect');
+  let placeId = DB.getCurrentPlace().id;
+
+  // 场所下拉（含「全部场所」选项）
+  function renderPlaceSelect() {
+    const places = DB.getPlaces();
+    placeSelect.innerHTML = places.map(p =>
+      `<option value="${p.id}" ${p.id === placeId ? 'selected' : ''}>${p.name}</option>`
+    ).join('') + `<option value="all">全部场所</option>`;
+  }
+  placeSelect.onchange = () => { placeId = placeSelect.value; render(); };
+
+  function fmtMoney(n) { return '¥' + Math.round(n).toLocaleString(); }
+  function fmtTime(ts) {
+    const diff = Date.now() - ts;
+    const min = 60000, hr = 3600000, day = 86400000;
+    if (diff < min) return '刚刚';
+    if (diff < hr) return Math.floor(diff / min) + ' 分钟前';
+    if (diff < day) return Math.floor(diff / hr) + ' 小时前';
+    if (diff < day * 7) return Math.floor(diff / day) + ' 天前';
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function render() {
+    function collectAll() {
+      const all = [];
+      DB.getPlaces().forEach(p => { DB.getItems(p.id).forEach(i => all.push(i)); });
+      return all.sort((a, b) => b.updatedAt - a.updatedAt);
+    }
+    function getRooms() {
+      if (placeId === 'all') return DB.getPlaces().flatMap(p => DB.getRooms(p.id));
+      return DB.getRooms(placeId);
+    }
+    const items = placeId === 'all' ? collectAll() : DB.getItems(placeId);
+    const rooms = getRooms();
+    const placeIds = placeId === 'all' ? DB.getPlaces().map(p => p.id) : [placeId];
+    const furns = placeIds.flatMap(pid => DB.getFurnitures(pid));
+    const subcats = placeIds.flatMap(pid => DB.getCategories(pid).filter(c => c.parentId));
+
+    const totalValue = items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+
+    // —— 按房间分布 ——
+    const roomDist = rooms.map(r => {
+      const furnIds = furns.filter(f => f.roomId === r.id).map(f => f.id);
+      const cnt = items.filter(i => i.furnitureId && furnIds.includes(i.furnitureId)).length;
+      return { room: r, count: cnt };
+    }).filter(x => x.count > 0).sort((a, b) => b.count - a.count);
+    const maxRoom = roomDist.length ? roomDist[0].count : 1;
+
+    // —— 按顶层分类价值 ——
+    const allCats = placeIds.flatMap(pid => DB.getCategories(pid));
+    const topCats = allCats.filter(c => !c.parentId);
+    const valueByCat = topCats.map(t => {
+      const subIds = allCats.filter(c => c.parentId === t.id).map(c => c.id);
+      const relItems = items.filter(i => i.categoryId === t.id || subIds.includes(i.categoryId));
+      const val = relItems.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+      return { cat: t, value: val, count: relItems.length };
+    }).filter(x => x.value > 0).sort((a, b) => b.value - a.value);
+
+    // —— 时间线（取最近 10 条 updatedAt） ——
+    const timeline = items.slice().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 10);
+
+    // —— 渲染 ——
+    pad.innerHTML = `
+      <div class="overview-hero">
+        <div class="oh-label">物品总数</div>
+        <div class="oh-num">${items.length}</div>
+        <div class="oh-sub">分布于 <strong>${rooms.length}</strong> 个房间 · <strong>${furns.length}</strong> 件家具 · <strong>${subcats.length}</strong> 个种类</div>
+      </div>
+
+      <div class="block-head"><span class="bh-no">01</span>按房间分布</div>
+      ${roomDist.length ? roomDist.map(d => `
+        <div class="dist-row">
+          <div class="dr-head"><span class="dr-name">${escapeHtml(d.room.emoji || '🚪')} ${escapeHtml(d.room.name)}${placeId === 'all' ? ' · ' + escapeHtml(DB.getPlace(d.room.placeId).name) : ''}</span><span class="dr-count">${d.count}</span></div>
+          <div class="dist-bar"><div class="dist-fill" style="width:${(d.count / maxRoom * 100).toFixed(1)}%;"></div></div>
+        </div>
+      `).join('') : '<div class="empty-mini">暂无物品分布</div>'}
+
+      <div class="block-head" style="margin-top:24px;"><span class="bh-no">02</span>价值合计</div>
+      ${valueByCat.length ? `
+      <div class="value-card">
+        ${valueByCat.map(v => `
+          <div class="value-row">
+            <span class="vr-name">${escapeHtml(v.cat.icon || '🏷️')} ${escapeHtml(v.cat.name)} <span style="color:var(--sumi-3);font-size:11px;">${v.count}件</span></span>
+            <span class="vr-amount">${fmtMoney(v.value)}</span>
+          </div>
+        `).join('')}
+        <div class="value-total">
+          <span class="vt-label">合计估值</span>
+          <span class="vt-amount">${fmtMoney(totalValue)}</span>
+        </div>
+      </div>` : '<div class="empty-mini">暂无价格数据</div>'}
+
+      <div class="block-head"><span class="bh-no">03</span>近期动态</div>
+      ${timeline.length ? `
+      <div class="timeline">
+        ${timeline.map(i => {
+          const placeName = placeId === 'all' ? DB.getPlace(i.placeId).name + ' · ' : '';
+          return `<div class="tl-item">
+            <div class="tl-dot add"></div>
+            <div class="tl-content">
+              <div class="tl-action">${escapeHtml(i.name)} <span style="color:var(--sumi-3);">×${i.quantity || 1}</span></div>
+              <div class="tl-meta">${escapeHtml(placeName + (i.locationPath || i.furnitureName || '未归位'))}${i.categoryName ? ' · ' + escapeHtml(i.categoryName) : ''}</div>
+              <div class="tl-time">${fmtTime(i.updatedAt)}${i.createdByName ? ' · ' + escapeHtml(i.createdByName) : ''}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '<div class="empty-mini">还没有物品</div>'}
+    `;
+  }
+
+  renderPlaceSelect();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 邀请成员</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .topbar .back-btn { justify-self: start; }
+  .topbar .topbar-title { justify-self: center; }
+
+  .invite-pad { padding: 8px 24px 40px; }
+
+  /* 说明 */
+  .invite-intro {
+    text-align: center; padding: 24px 0 20px;
+  }
+  .invite-intro .ii-icon {
+    width: 64px; height: 64px; margin: 0 auto 14px;
+    border-radius: 50%; background: var(--washi-2); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif); font-size: 28px; color: var(--indigo); font-weight: 700;
+  }
+  .invite-intro .ii-title {
+    font-family: var(--font-serif); font-size: 18px; color: var(--sumi); font-weight: 700;
+  }
+  .invite-intro .ii-desc {
+    font-size: 12px; color: var(--sumi-3); margin-top: 8px; line-height: 1.6;
+  }
+
+  /* 二维码卡 */
+  .qr-card {
+    margin: 0 0 20px; padding: 24px; background: var(--paper);
+    border: 1px solid var(--line); border-radius: var(--r-lg); text-align: center;
+  }
+  .qr-box {
+    width: 180px; height: 180px; margin: 0 auto 16px;
+    background: var(--washi); border: 2px solid var(--sumi);
+    display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+    gap: 2px; padding: 10px; border-radius: var(--r-md);
+  }
+  .qr-box .qr-cell { background: var(--sumi); border-radius: 1px; }
+  .qr-box .qr-cell.empty { background: transparent; }
+  /* 模拟二维码定位角 */
+  .qr-corner { background: var(--paper) !important; position: relative; }
+  .qr-info { font-size: 11px; color: var(--sumi-3); }
+
+  /* 邀请码 */
+  .code-card {
+    margin: 0 0 16px; padding: 16px; background: var(--paper);
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .code-card .cc-left .cc-label { font-size: 10px; color: var(--sumi-3); letter-spacing: 1px; }
+  .code-card .cc-code {
+    font-family: var(--font-serif); font-size: 24px; font-weight: 700;
+    color: var(--sumi); letter-spacing: 6px; margin-top: 4px;
+  }
+  .copy-btn {
+    background: var(--sumi); color: var(--paper); font-size: 12px; font-weight: 600;
+    padding: 9px 16px; border-radius: var(--r-md); cursor: pointer;
+    border: none; font-family: var(--font-sans); white-space: nowrap; transition: all 0.2s;
+  }
+  .copy-btn:hover { background: var(--indigo-deep); }
+
+  /* 分享方式 */
+  .share-block { margin-top: 20px; }
+  .share-head {
+    font-family: var(--font-serif); font-size: 12px; color: var(--sumi-2);
+    font-weight: 700; letter-spacing: 2px; margin-bottom: 12px;
+  }
+  .share-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-lg); margin-bottom: 8px; cursor: pointer; text-decoration: none;
+    transition: all 0.2s;
+  }
+  .share-row:hover { border-color: var(--sumi); }
+  .share-row .sr-icon {
+    width: 36px; height: 36px; border-radius: var(--r-md); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .share-row .sr-info { flex: 1; }
+  .share-row .sr-name { font-size: 14px; color: var(--sumi); font-weight: 500; }
+  .share-row .sr-desc { font-size: 11px; color: var(--sumi-3); margin-top: 2px; }
+  .share-row .sr-arrow { font-size: 12px; color: var(--sumi-3); }
+
+  /* 提示 */
+  .invite-tip {
+    margin-top: 20px; padding: 12px 14px;
+    background: var(--washi-2); border-left: 3px solid var(--indigo);
+    border-radius: var(--r-sm); font-size: 11px; color: var(--sumi-2); line-height: 1.6;
+  }
+  .invite-tip strong { color: var(--indigo); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-profile.html">‹</a>
+      <div class="topbar-title">邀请成员</div>
+      <span style="width: 28px;"></span>
+    </div>
+
+    <div class="scroll">
+      <div class="invite-pad">
+        <!-- 说明 -->
+        <div class="invite-intro">
+          <div class="ii-icon">✦</div>
+          <div class="ii-title">邀请家人共享</div>
+          <div class="ii-desc">成员加入后可访问你的所有场所<br>可后续为每位成员单独配置可访问的场所</div>
+        </div>
+
+        <!-- 二维码 -->
+        <div class="qr-card">
+          <div class="qr-box" id="qrBox"></div>
+          <div class="qr-info" id="qrInfo">扫一扫,加入纳里</div>
+        </div>
+
+        <!-- 邀请码 -->
+        <div class="code-card">
+          <div class="cc-left">
+            <div class="cc-label">邀请码</div>
+            <div class="cc-code" id="inviteCode">—</div>
+          </div>
+          <button class="copy-btn" id="copyBtn">复制</button>
+        </div>
+
+        <!-- 分享方式 -->
+        <div class="share-block">
+          <div class="share-head">分享给好友</div>
+          <a class="share-row" onclick="alert('微信分享将在小程序版接入')">
+            <div class="sr-icon" style="background:#D8F3DC;">💬</div>
+            <div class="sr-info"><div class="sr-name">微信好友</div><div class="sr-desc">发送给微信好友</div></div>
+            <span class="sr-arrow">›</span>
+          </a>
+          <a class="share-row" onclick="alert('分享卡片将在小程序版接入')">
+            <div class="sr-icon" style="background:#E4DCEC;">📤</div>
+            <div class="sr-info"><div class="sr-name">生成分享卡片</div><div class="sr-desc">带二维码的图片,可保存分享</div></div>
+            <span class="sr-arrow">›</span>
+          </a>
+        </div>
+
+        <!-- 提示 -->
+        <div class="invite-tip">
+          <strong>关于权限:</strong> 新成员默认可访问你的<strong>所有场所</strong>。邀请成功后,可在「我的 → 家庭成员」里为TA单独配置可访问的场所(如只让合伙人进工作室)。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    DB.init();
+    const user = DB.getUser();
+
+    // 基于用户 id 生成稳定的 6 位邀请码（同一用户每次打开一致）
+    function genInviteCode(seed) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let h = 0;
+      const s = String(seed || '') + '|nali';
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      let code = '';
+      for (let i = 0; i < 6; i++) { code += chars[h % chars.length]; h = Math.floor(h / chars.length) + i * 7; }
+      return code;
+    }
+    const code = genInviteCode(user.id);
+    document.getElementById('inviteCode').textContent = code;
+    document.getElementById('qrInfo').textContent = '扫一扫,加入「' + (user.nickname || '纳里') + '」的纳里';
+
+    // 真实复制
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      const btn = document.getElementById('copyBtn');
+      const done = () => { btn.textContent = '✓ 已复制'; setTimeout(() => btn.textContent = '复制', 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(done).catch(() => fallbackCopy(code, done));
+      } else { fallbackCopy(code, done); }
+    });
+    function fallbackCopy(text, cb) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); cb(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    // 生成基于邀请码的稳定二维码图案（非真实二维码，demo 用）
+    const qr = document.getElementById('qrBox');
+    let seed = 0;
+    for (let i = 0; i < code.length; i++) seed = (seed * 31 + code.charCodeAt(i)) >>> 0;
+    function rng() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+    let html = '';
+    for (let i = 0; i < 64; i++) {
+      const r = Math.floor(i / 8), c = i % 8;
+      const isCorner = (r < 3 && c < 3) || (r < 3 && c > 4) || (r > 4 && c < 3);
+      const filled = isCorner ? rng() > 0.3 : rng() > 0.55;
+      html += `<div class="qr-cell ${filled ? '' : 'empty'}"></div>`;
+    }
+    qr.innerHTML = html;
+  </script>
+</body>
+</html>

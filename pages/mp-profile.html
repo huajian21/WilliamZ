@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 我的</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  .profile-hero {
+    padding: 24px; display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .profile-avatar {
+    width: 60px; height: 60px; border-radius: var(--r-md); background: var(--washi-2);
+    border: 1px solid var(--line); display: flex; align-items: center;
+    justify-content: center; font-size: 24px; color: var(--sumi); font-weight: 600;
+    font-family: var(--font-serif); overflow: hidden;
+  }
+  .profile-name { font-family: var(--font-serif); font-size: 20px; font-weight: 700; color: var(--sumi); }
+  .profile-meta { font-size: 12px; color: var(--sumi-3); margin-top: 4px; }
+
+  /* 成员管理（全局） */
+  .member-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--line);
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .member-row:last-child { border-bottom: none; }
+  .member-row:hover { padding-left: 6px; }
+  .member-avatar {
+    width: 38px; height: 38px; border-radius: var(--r-md); background: var(--washi-2);
+    border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--sumi-2); font-weight: 600; flex-shrink: 0; overflow: hidden;
+  }
+  .member-info { flex: 1; min-width: 0; }
+  .member-name { font-size: 14px; color: var(--sumi); font-weight: 500; }
+  .member-access { font-size: 11px; color: var(--sumi-3); margin-top: 3px; }
+  .member-access .places { color: var(--indigo); }
+  .member-arrow { font-size: 12px; color: var(--sumi-3); }
+
+  .invite-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 14px; padding: 12px; border: 1px solid var(--line-2);
+    border-radius: var(--r-lg); color: var(--sumi); font-size: 13px;
+    text-decoration: none; transition: all 0.2s ease;
+  }
+  .invite-btn:hover { border-color: var(--indigo); color: var(--indigo); background: var(--washi-2); }
+
+  /* 设置菜单 */
+  .menu-list { margin: 0 24px; }
+  .menu-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 0; border-bottom: 1px solid var(--line);
+    cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+  }
+  .menu-item:last-child { border-bottom: none; }
+  .menu-item:hover { padding-left: 6px; }
+  .menu-item:hover .mname { color: var(--indigo); }
+  .menu-item .micon { font-size: 18px; width: 24px; text-align: center; color: var(--sumi-2); }
+  .menu-item .mname { flex: 1; font-size: 14px; color: var(--sumi); transition: color 0.2s ease; }
+  .menu-item .marrow { font-size: 12px; color: var(--sumi-3); }
+  .menu-item.disabled { opacity: 0.4; cursor: not-allowed; }
+  .menu-item.disabled:hover { padding-left: 0; }
+  .menu-item.disabled:hover .mname { color: var(--sumi); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="scroll">
+      <div class="profile-hero">
+        <div class="profile-avatar"><img src="../assets/hjlogo.jpg" style="width:100%;height:100%;border-radius:var(--r-md);object-fit:cover;"></div>
+        <div>
+          <div class="profile-name">花间</div>
+          <div class="profile-meta" id="profileMeta">—</div>
+        </div>
+      </div>
+
+      <!-- 01 家庭成员（JS 动态渲染） -->
+      <div class="section" style="margin-top: 28px;" id="memberSection">
+        <div class="section-head">
+          <div class="stitle"><span class="sno">01</span>家庭成员</div>
+          <span style="font-size:11px;color:var(--sumi-3);" id="memberCount">0 人</span>
+        </div>
+        <a class="invite-btn" href="mp-invite.html">✦ 邀请新成员</a>
+      </div>
+
+      <!-- 02 管理与设置 -->
+      <div class="section" style="margin-top: 28px;">
+        <div class="section-head">
+          <div class="stitle"><span class="sno">02</span>管理与设置</div>
+        </div>
+        <div style="margin:0 24px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;">
+          <a href="mp-place-settings.html" style="display:flex;align-items:center;gap:14px;padding:15px 16px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--sumi);font-size:14px;">
+            <span style="flex:1;">场所设置</span>
+            <span style="font-size:11px;color:var(--sumi-3);font-family:var(--font-serif);" id="setPlaceName">我们家</span>
+            <span style="font-size:12px;color:var(--sumi-3);">›</span>
+          </a>
+          <a href="mp-room-manage.html" style="display:flex;align-items:center;gap:14px;padding:15px 16px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--sumi);font-size:14px;">
+            <span style="flex:1;">房间与家具</span>
+            <span style="font-size:12px;color:var(--sumi-3);">›</span>
+          </a>
+          <a href="mp-category-manage.html" style="display:flex;align-items:center;gap:14px;padding:15px 16px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--sumi);font-size:14px;">
+            <span style="flex:1;">分类管理</span>
+            <span style="font-size:12px;color:var(--sumi-3);">›</span>
+          </a>
+          <a href="mp-stats.html" style="display:flex;align-items:center;gap:14px;padding:15px 16px;text-decoration:none;color:var(--sumi);font-size:14px;">
+            <span style="flex:1;">统计概览</span>
+            <span style="font-size:12px;color:var(--sumi-3);">›</span>
+          </a>
+        </div>
+      </div>
+
+      <div style="text-align: center; padding: 40px 0; font-size: 11px; color: var(--sumi-3);">
+        纳里 · 知物之所,归于有序<br>版本 V1.0.0
+      </div>
+    </div>
+
+    <div class="tabs">
+      <a class="tab" href="mp-home.html"><span class="tkanji">首页</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-browse.html"><span class="tkanji">物品</span><span class="tdot"></span></a>
+      <a class="tab" href="mp-place.html"><span class="tkanji">房间</span><span class="tdot"></span></a>
+      <a class="tab active" href="mp-profile.html"><span class="tkanji">我的</span><span class="tdot"></span></a>
+    </div>
+  </div>
+  <script>
+    DB.init();
+    const user = DB.getUser();
+    const members = DB.getMembers();
+    const places = DB.getPlaces();
+    const curPlace = DB.getCurrentPlace();
+
+    // 用户资料头
+    document.querySelector('.profile-avatar img').src = user.avatarUrl || '';
+    document.querySelector('.profile-name').textContent = user.nickname;
+    document.getElementById('setPlaceName').textContent = curPlace.name;
+    // meta：加入时间 + 身份
+    const joinD = new Date(user.createdAt || Date.now());
+    const joinStr = joinD.getFullYear() + '-' + String(joinD.getMonth() + 1).padStart(2, '0') + ' 加入';
+    document.getElementById('profileMeta').textContent = '纳里用户 · ' + joinStr + ' · 场所主';
+
+    // 渲染成员
+    const section = document.getElementById('memberSection');
+    const inviteBtn = section.querySelector('.invite-btn');
+    document.getElementById('memberCount').textContent = members.length + ' 人';
+
+    members.forEach(m => {
+      const isMe = m.userId === user.id;
+      const accessText = m.accessiblePlaceIds.length === 0
+        ? '全部场所'
+        : m.accessiblePlaceIds.map(pid => { const p = places.find(x => x.id === pid); return p ? p.name : ''; }).filter(Boolean).join(' · ');
+      const joinDate = new Date(m.joinTime);
+      const joinStr = joinDate.getFullYear() + '-' + String(joinDate.getMonth()+1).padStart(2,'0') + '-' + String(joinDate.getDate()).padStart(2,'0');
+
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      if (!isMe) row.style.cursor = 'pointer';
+      row.innerHTML = `
+        <div class="member-avatar" style="${isMe ? 'background:var(--washi);border-color:var(--indigo);' : ''}padding:0;overflow:hidden;">
+          ${m.avatarUrl ? '<img src="' + m.avatarUrl + '" style="width:100%;height:100%;object-fit:cover;">' : m.nickname.charAt(0)}
+        </div>
+        <div class="member-info">
+          <div class="member-name">${m.nickname}<span style="font-size:11px;color:var(--sumi-3);margin-left:6px;">(${m.role || '成员'})</span></div>
+          <div class="member-access">${isMe ? '创建者 · ' : '可访问：'}<span class="places">${accessText}</span> · ${joinStr} 加入</div>
+        </div>
+        ${isMe
+          ? '<span class="member-role" style="font-size:10px;color:var(--indigo);border:1px solid var(--indigo);padding:1px 7px;border-radius:var(--r-sm);">主</span>'
+          : '<span class="member-arrow">›</span>'}
+      `;
+      if (!isMe) {
+        row.addEventListener('click', () => location.href = 'mp-member-access.html?id=' + m.id);
+      }
+      section.insertBefore(row, inviteBtn);
+    });
+  </script>
+</body>
+</html>

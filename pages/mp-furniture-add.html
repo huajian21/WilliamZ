@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>纳里 · 添加家具</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/store.js"></script>
+<style>
+  /* 添加页标题居中（三栏 grid） */
+  .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .topbar .back-btn { justify-self: start; }
+  .topbar .topbar-title { justify-self: center; }
+  .topbar-place {
+    justify-self: end; height: 32px; padding: 0 10px; font-size: 12px;
+    background: var(--paper); border: 1px solid var(--line-2); border-radius: var(--r-md);
+    color: var(--sumi); outline: none; cursor: pointer; appearance: none; padding-right: 22px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 10 6'%3E%3Cpath fill='%23A8A296' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+
+  /* 名称行 */
+  .name-bar {
+    display: flex; align-items: center; gap: 12px;
+    margin: 4px 24px 14px;
+  }
+  .name-bar .nb-label { font-size: 10px; color: var(--sumi-3); letter-spacing: 2px; flex-shrink: 0; }
+  .name-bar .nb-input {
+    flex: 1; border: none; background: transparent; outline: none; min-width: 0;
+    font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: var(--sumi);
+    border-bottom: 1px solid var(--line); padding-bottom: 6px;
+  }
+  .name-bar .nb-input:focus { border-bottom-color: var(--indigo); }
+  .name-bar .nb-input::placeholder { color: var(--sumi-3); font-weight: 400; }
+
+  /* 信息卡 */
+  .info-card { margin: 0 24px 14px; padding: 4px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-lg); }
+  .ic-field { padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .ic-field:last-child { border-bottom: none; }
+  .ic-label { font-size: 11px; color: var(--sumi-3); letter-spacing: 1px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .ic-cur { font-family: var(--font-serif); color: var(--indigo); font-weight: 600; font-size: 12px; cursor: pointer; border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+  .ic-cur:hover { border-bottom-color: var(--indigo); }
+  .ic-btn { font-size: 11px; color: var(--indigo); cursor: pointer; background: none; border: none; font-family: var(--font-sans); }
+
+  /* 照片 */
+  .pc-photos { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pc-photo { width: 80px; height: 80px; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); position: relative; flex-shrink: 0; }
+  .pc-photo img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.88); }
+  .pc-photo-del { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; background: rgba(42,39,35,0.6); color: #fff; border-radius: 50%; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; line-height: 1; }
+  .pc-photo-add { width: 80px; height: 80px; border-radius: var(--r-md); border: 1px dashed var(--line-2); background: var(--washi); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--sumi-3); cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+  .pc-photo-add:hover { color: var(--indigo); border-color: var(--indigo); }
+  .pc-photo-add .ppa-icon { font-size: 26px; line-height: 1; }
+  .pc-photo-add .ppa-text { font-size: 10px; margin-top: 3px; }
+  .pc-remark { width: 100%; border: none; background: transparent; outline: none; font-size: 13px; color: var(--sumi); font-family: var(--font-sans); padding: 2px 0; }
+
+  /* 照片预留提示 */
+  .photo-tip {
+    margin: 8px 24px 0; padding: 10px 14px; background: var(--washi-2);
+    border-left: 3px solid var(--indigo); border-radius: var(--r-sm);
+    font-size: 11px; color: var(--sumi-2); line-height: 1.6;
+  }
+  .photo-tip strong { color: var(--indigo); }
+
+  /* 底部固定保存条 */
+  .save-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--paper); border-top: 1px solid var(--line);
+    padding: 12px 24px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 -4px 16px rgba(42,39,35,0.06);
+  }
+  .save-bar .tp-meta { flex: 1; font-size: 11px; color: var(--sumi-3); font-family: var(--font-serif); }
+  .save-bar .save-btn { background: var(--sumi); color: var(--paper); padding: 13px 40px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; letter-spacing: 2px; text-decoration: none; transition: all 0.2s; border: none; cursor: pointer; font-family: var(--font-sans); }
+  .save-bar .save-btn:hover { background: var(--indigo-deep); }
+  @media (min-width: 481px) { .save-bar { left: 50%; transform: translateX(-50%); width: 390px; } }
+
+  /* —— 房间选择悬浮面板 —— */
+  .sheet-mask { position: fixed; inset: 0; background: rgba(42,39,35,0.4); z-index: 80; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: var(--paper);
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); max-height: 75vh;
+    display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(42,39,35,0.15);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sheet.open { transform: translateY(0); }
+  @media (min-width: 481px) { .sheet { left: 50%; transform: translate(-50%, 100%); width: 390px; } .sheet.open { transform: translate(-50%, 0); } }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 20px 12px; border-bottom: 1px solid var(--line); }
+  .sheet-title { font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--sumi); letter-spacing: 2px; }
+  .sheet-close { font-size: 22px; color: var(--sumi-3); cursor: pointer; line-height: 1; padding: 4px; border: none; background: none; }
+  .sheet-body { padding: 16px 20px; overflow-y: auto; }
+  .sheet-body::-webkit-scrollbar { width: 0; }
+  .room-pick-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 14px; border: 1px solid var(--line-2); border-radius: var(--r-md);
+    margin-bottom: 8px; cursor: pointer; transition: all 0.2s; background: var(--washi);
+  }
+  .room-pick-item:hover { border-color: var(--sumi); }
+  .room-pick-item.selected { border-color: var(--indigo); background: var(--paper); box-shadow: 0 0 0 2px rgba(52,92,92,0.12); }
+  .room-pick-item .rpi-emoji { font-size: 22px; }
+  .room-pick-item .rpi-name { flex: 1; font-family: var(--font-serif); font-size: 15px; font-weight: 600; color: var(--sumi); }
+  .room-pick-item .rpi-count { font-size: 11px; color: var(--sumi-3); font-family: var(--font-serif); }
+  .sheet-foot { padding: 12px 20px; border-top: 1px solid var(--line); }
+  .sheet-foot .btn-confirm { width: 100%; background: var(--sumi); color: var(--paper); padding: 13px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; letter-spacing: 2px; text-align: center; cursor: pointer; border: none; font-family: var(--font-sans); }
+
+  .empty-mini { padding: 24px 16px; text-align: center; color: var(--sumi-3); font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><span>纳里 📶 100%</span></div>
+
+    <div class="topbar">
+      <a class="back-btn" href="mp-place.html">‹</a>
+      <div class="topbar-title">添加家具</div>
+      <select class="topbar-place" id="placeDropdown"></select>
+    </div>
+
+    <div class="scroll" style="padding-bottom: calc(90px + env(safe-area-inset-bottom));">
+      <!-- 家具名称 -->
+      <div class="name-bar">
+        <span class="nb-label">名称</span>
+        <input class="nb-input" id="nameInput" placeholder="如：顶置行李柜" maxlength="20">
+      </div>
+
+      <!-- 所属房间 -->
+      <div class="info-card">
+        <div class="ic-field">
+          <div class="ic-label">所属房间 <span class="ic-cur" id="curRoom" onclick="openSheet()">未选择</span> <button class="ic-btn" onclick="openSheet()">选择</button></div>
+        </div>
+      </div>
+
+      <!-- 照片（预留） -->
+      <div class="info-card">
+        <div class="ic-field">
+          <div class="ic-label">照片</div>
+          <div class="pc-photos" id="photoWrap">
+            <div class="pc-photo-add" onclick="addPhoto(this)">
+              <span class="ppa-icon">+</span><span class="ppa-text">添加</span>
+            </div>
+          </div>
+        </div>
+        <div class="ic-field">
+          <input class="pc-remark" id="remarkInput" placeholder="备注(选填)：如尺寸、容量">
+        </div>
+      </div>
+
+      <div class="photo-tip">
+        <strong>📸 照片功能预留：</strong>家具照片为 P1 功能（数据模型已预留 Furniture.photo 字段）。当前可上传但暂不持久化展示。
+      </div>
+    </div>
+
+    <!-- 底部保存条 -->
+    <div class="save-bar">
+      <div class="tp-meta" id="tpMeta">未选择房间</div>
+      <button class="save-btn" id="saveBtn">保存</button>
+    </div>
+  </div>
+
+  <!-- 房间选择面板 -->
+  <div class="sheet-mask" id="roomMask" onclick="closeSheet()"></div>
+  <div class="sheet" id="roomSheet">
+    <div class="sheet-head">
+      <div class="sheet-title">选择房间</div>
+      <button class="sheet-close" onclick="closeSheet()">×</button>
+    </div>
+    <div class="sheet-body" id="roomList"></div>
+    <div class="sheet-foot">
+      <button class="btn-confirm" onclick="confirmRoom()">确定</button>
+    </div>
+  </div>
+
+<script>
+  DB.init();
+  let selectedPlaceId = DB.getCurrentPlace().id;
+  let selectedRoomId = null;
+
+  // 场所下拉
+  const places = DB.getPlaces();
+  const placeDropdown = document.getElementById('placeDropdown');
+  placeDropdown.innerHTML = places.map(p => '<option value="' + p.id + '">' + p.name + '</option>').join('');
+  placeDropdown.value = selectedPlaceId;
+  placeDropdown.addEventListener('change', () => {
+    selectedPlaceId = placeDropdown.value;
+    selectedRoomId = null;
+    document.getElementById('curRoom').textContent = '未选择';
+    document.getElementById('tpMeta').textContent = '未选择房间';
+  });
+
+  // 房间选择面板
+  function openSheet() {
+    renderRoomList();
+    document.getElementById('roomMask').classList.add('open');
+    document.getElementById('roomSheet').classList.add('open');
+  }
+  function closeSheet() {
+    document.getElementById('roomMask').classList.remove('open');
+    document.getElementById('roomSheet').classList.remove('open');
+  }
+  function renderRoomList() {
+    const rooms = DB.getRooms(selectedPlaceId);
+    const furns = DB.getFurnitures(selectedPlaceId);
+    const list = document.getElementById('roomList');
+    if (rooms.length === 0) {
+      list.innerHTML = '<div class="empty-mini">该场所还没有房间，请先到「房间页」新增</div>';
+      return;
+    }
+    list.innerHTML = rooms.map(r => {
+      const cnt = furns.filter(f => f.roomId === r.id).length;
+      return '<div class="room-pick-item ' + (r.id === selectedRoomId ? 'selected' : '') + '" data-id="' + r.id + '" onclick="pickRoom(\'' + r.id + '\')">' +
+        '<span class="rpi-emoji">' + (r.emoji || '🚪') + '</span>' +
+        '<span class="rpi-name">' + r.name + '</span>' +
+        '<span class="rpi-count">' + cnt + ' 件家具</span>' +
+        '</div>';
+    }).join('');
+  }
+  function pickRoom(rid) {
+    selectedRoomId = rid;
+    document.querySelectorAll('.room-pick-item').forEach(el => el.classList.toggle('selected', el.dataset.id === rid));
+  }
+  function confirmRoom() {
+    if (!selectedRoomId) { alert('请选择房间'); return; }
+    const r = DB.getRoom(selectedRoomId);
+    const place = DB.getPlace(selectedPlaceId);
+    document.getElementById('curRoom').textContent = (r.emoji || '🚪') + ' ' + r.name;
+    document.getElementById('tpMeta').textContent = (place ? place.name + ' · ' : '') + r.name;
+    closeSheet();
+  }
+
+  // 照片（压缩，同物品页规格）
+  let photoInput = null;
+  function addPhoto(el) {
+    const wrap = el.parentElement;
+    if (!photoInput) {
+      photoInput = document.createElement('input');
+      photoInput.type = 'file';
+      photoInput.accept = 'image/*';
+      photoInput.capture = 'environment';
+      photoInput.style.display = 'none';
+      photoInput.addEventListener('change', () => {
+        const file = photoInput.files && photoInput.files[0];
+        if (!file) return;
+        compressImage(file, 1280, 0.75, (dataUrl) => {
+          if (!dataUrl) { alert('图片处理失败，请重试'); return; }
+          const np = document.createElement('div');
+          np.className = 'pc-photo';
+          np.innerHTML = '<img src="' + dataUrl + '" alt=""><button class="pc-photo-del" onclick="this.parentElement.remove()">✕</button>';
+          wrap.insertBefore(np, el);
+        });
+        photoInput.value = '';
+      });
+      document.body.appendChild(photoInput);
+    }
+    photoInput.click();
+  }
+  function compressImage(file, maxSize, quality, cb) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxSize) {
+          height = Math.round(height * maxSize / width); width = maxSize;
+        } else if (height >= width && height > maxSize) {
+          width = Math.round(width * maxSize / height); height = maxSize;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        cb(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => cb(null);
+      img.src = reader.result;
+    };
+    reader.onerror = () => cb(null);
+    reader.readAsDataURL(file);
+  }
+
+  // 保存
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const name = document.getElementById('nameInput').value.trim();
+    if (!name) { alert('请输入家具名称'); document.getElementById('nameInput').focus(); return; }
+    if (!selectedRoomId) { alert('请选择所属房间'); openSheet(); return; }
+    DB.addFurniture(selectedPlaceId, selectedRoomId, name);
+    DB.setCurrentPlace(selectedPlaceId);
+    location.href = 'mp-place.html';
+  });
+</script>
+</body>
+</html>
